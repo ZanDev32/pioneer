@@ -1,0 +1,22 @@
+{
+  "granularity": "coarse",
+  "execution": "parallel",
+  "commit_docs": true,
+  "yolo": false,
+  "research": true,
+  "agents": true,
+  "workflow": {
+    "text_mode": false
+  },
+  "model_profile": {
+    "planner": "sonnet",
+    "executor": "sonnet",
+    "researcher": "sonnet"
+  },
+  "integrations": {
+    "github": true,
+    "brave_search": false,
+    "firecrawl": false,
+    "exa_search": false
+  }
+}
