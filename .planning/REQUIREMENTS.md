@@ -89,10 +89,10 @@
 - Structured error responses (not raw stderr dumps)
 
 ## Phase 1 Requirements (Skills Layer)
-- SKILL.md mega-skill with 3-tier execution hierarchy
-- Safety guidelines for agent interactions
-- Fallback shell wrappers (Tier 3)
-- Troubleshooting reference docs
+- **SK-01:** SKILL.md mega-skill with 3-tier execution hierarchy (MCP → Auto-install → CLI fallback)
+- **SK-02:** Safety guidelines for agent interactions (ask-before-flash, port discovery, workspace boundaries)
+- **SK-03:** Fallback shell wrappers (Tier 3) — standalone scripts for build, upload, clean, monitor, discover, test
+- **SK-04:** Troubleshooting reference docs covering port/connection, build/compile, ESP32 runtime, and library/platform issues
 
 ## Phase 2 Requirements (Tool Expansion)
 - pio_list_boards: List available boards/environments
