@@ -19,11 +19,8 @@
 **Goal:** Create SKILL.md instruction layer for safe agent interactions
 
 ### Plans
-1. **Mega-skill SKILL.md** - 3-tier execution hierarchy (MCP → Auto-install → CLI fallback)
-2. **Tool reference guide** - Complete parameter reference for each MCP tool
-3. **ESP32 troubleshooting** - Port drift, DTR/RTS overrides, flash corruption recovery
-4. **Fallback scripts** - Shell wrappers (build.sh, upload.sh, clean.sh, monitor.sh)
-5. **Safety guidelines** - Ask before flash, environment safety, port discovery first
+- [ ] 01-01-PLAN.md — Mega-skill SKILL.md: 3-tier execution hierarchy, safety guardrails, tool reference, ESP32 troubleshooting
+- [ ] 01-02-PLAN.md — Shell wrappers: 6 standalone scripts (build.sh, upload.sh, clean.sh, monitor.sh, discover.sh, test.sh)
 
 ## Phase 2: Tool Expansion
 **Goal:** Add discovery, monitoring, and advanced tools
