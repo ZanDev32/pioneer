@@ -90,6 +90,13 @@ export function registerUploadTools(server, ctx) {
         .optional()
         .default(false)
         .describe('Include full output if true.'),
+      async: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'Run upload in the background. Returns a taskId immediately; poll with pio_task_status for results.',
+        ),
     },
     async (params) => {
       try {
@@ -108,6 +115,92 @@ export function registerUploadTools(server, ctx) {
         const args = ['run', '-t', 'upload'];
         if (params.environment) args.push('-e', params.environment);
         if (params.port) args.push('-p', params.port);
+
+        const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
+
+        // ---------------------------------------------------------------
+        // Async (background) path — return taskId immediately
+        // ---------------------------------------------------------------
+        if (params.async && ctx.taskManager) {
+          const envLabel = params.environment || 'default';
+          const portLabel = params.port || 'auto';
+
+          const execPromise = new Promise((resolve) => {
+            exec(cmd, {
+              cwd: projectDir,
+              maxBuffer: 50 * 1024 * 1024,
+              env: { ...process.env },
+            }, (error, stdout, stderr) => {
+              const combined = (stdout || '') + '\n' + (stderr || '');
+              const exitCode = error ? error.code || 1 : 0;
+              const success = !error;
+
+              // Detect NO_DEVICE in output
+              if (/no serial ports? found|no device|serial port not found/i.test(combined)) {
+                resolve({
+                  exitCode,
+                  result: {
+                    success: false,
+                    exit_code: exitCode,
+                    error: { code: ERROR_CODES.NO_DEVICE, message: 'No serial device found' },
+                    port: params.port || null,
+                  },
+                });
+                return;
+              }
+
+              const diagnostics = parseAllDiagnostics(combined, projectDir);
+              const metadata = parseBuildMetadata(combined, projectDir, params.environment || '');
+
+              resolve({
+                exitCode,
+                result: {
+                  success: success && !hasErrors(diagnostics),
+                  exit_code: exitCode,
+                  port: params.port || null,
+                  diagnostics,
+                  summary: summarizeDiagnostics(diagnostics),
+                  metadata,
+                },
+              });
+            });
+          });
+
+          const taskId = ctx.taskManager.createTask({
+            type: 'upload',
+            message: `Uploading ${envLabel} to ${portLabel} in background...`,
+            meta: { projectDir, environment: params.environment, port: params.port },
+          });
+
+          execPromise.then(({ exitCode, result }) => {
+            ctx.taskManager.updateTask(taskId, {
+              status: result.success ? 'completed' : 'failed',
+              exitCode,
+              result,
+              message: result.success
+                ? `Upload to ${portLabel} complete`
+                : `Upload to ${portLabel} failed (exit ${exitCode})`,
+            });
+            server.sendLoggingMessage?.({ level: result.success ? 'info' : 'error', data: { task_id: taskId, event: 'upload_complete' } });
+          });
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  task_id: taskId,
+                  status: 'running',
+                  message: `Uploading ${envLabel} to ${portLabel} in background`,
+                }, null, 2),
+              },
+            ],
+          };
+        }
+
+        // ---------------------------------------------------------------
+        // Sync (blocking) path — existing behavior
+        // ---------------------------------------------------------------
 
         // Execute upload
         let rawOutput = '';

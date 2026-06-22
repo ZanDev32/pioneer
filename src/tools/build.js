@@ -128,6 +128,13 @@ export function registerBuildTools(server, ctx) {
         .optional()
         .default(false)
         .describe('Only return diagnostics for files modified since the last build.'),
+      async: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'Run build in the background. Returns a taskId immediately; poll with pio_task_status for results.',
+        ),
     },
     async (params) => {
       try {
@@ -153,6 +160,78 @@ export function registerBuildTools(server, ctx) {
         if (params.build_only) {
           args.push('-t', 'compiledb');
         }
+
+        const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
+
+        // ---------------------------------------------------------------
+        // Async (background) path — return taskId immediately
+        // ---------------------------------------------------------------
+        if (params.async && ctx.taskManager) {
+          const envLabel = params.environment || 'default';
+
+          const execPromise = new Promise((resolve) => {
+            exec(cmd, {
+              cwd: projectDir,
+              maxBuffer: 50 * 1024 * 1024,
+              env: { ...process.env },
+            }, (error, stdout, stderr) => {
+              const combined = (stdout || '') + '\n' + (stderr || '');
+              const exitCode = error ? error.code || 1 : 0;
+              const diagnostics = parseAllDiagnostics(combined, projectDir);
+              const metadata = parseBuildMetadata(combined, projectDir, params.environment || '');
+              const success = !error && !diagnostics.some((d) => d.type === 'error' || d.type === 'fatal error');
+
+              resolve({
+                exitCode,
+                result: {
+                  success,
+                  exit_code: exitCode,
+                  diagnostics,
+                  summary: summarizeDiagnostics(diagnostics),
+                  metadata,
+                },
+              });
+            });
+          });
+
+          const child = null; // exec callback-based, not spawn
+          const taskId = ctx.taskManager.createTask({
+            type: 'build',
+            message: `Building ${envLabel} in background...`,
+            child,
+            meta: { projectDir, environment: params.environment },
+          });
+
+          // Wire promise to update task state on completion
+          execPromise.then(({ exitCode, result }) => {
+            ctx.taskManager.updateTask(taskId, {
+              status: result.success ? 'completed' : 'failed',
+              exitCode,
+              result,
+              message: result.success
+                ? `Build ${envLabel} complete: ${result.summary}`
+                : `Build ${envLabel} failed: ${result.summary}`,
+            });
+            server.sendLoggingMessage?.({ level: result.success ? 'info' : 'error', data: { task_id: taskId, event: 'build_complete' } });
+          });
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  task_id: taskId,
+                  status: 'running',
+                  message: `Building ${envLabel} in background`,
+                }, null, 2),
+              },
+            ],
+          };
+        }
+
+        // ---------------------------------------------------------------
+        // Sync (blocking) path — existing behavior
+        // ---------------------------------------------------------------
 
         // Execute PIO build
         let rawOutput = '';
