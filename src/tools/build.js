@@ -212,7 +212,7 @@ export function registerBuildTools(server, ctx) {
                 ? `Build ${envLabel} complete: ${result.summary}`
                 : `Build ${envLabel} failed: ${result.summary}`,
             });
-            server.sendLoggingMessage?.({ level: result.success ? 'info' : 'error', data: { task_id: taskId, event: 'build_complete' } });
+            server.server?.sendLoggingMessage?.({ level: result.success ? 'info' : 'error', data: { task_id: taskId, event: 'build_complete' } });
           });
 
           return {

@@ -149,11 +149,22 @@ export function registerMonitorTools(server, ctx) {
         }
 
         // Spawn detached child — stdout goes to log file, stderr to pipe (for permission errors)
-        const child = spawn('pio', pioArgs, {
-          cwd: projectDir,
-          detached: true,
-          stdio: ['ignore', logFd, 'pipe'],
-        });
+        let child;
+        try {
+          child = spawn('pio', pioArgs, {
+            cwd: projectDir,
+            detached: true,
+            stdio: ['ignore', logFd, 'pipe'],
+          });
+        } catch (spawnErr) {
+          // spawn failed (e.g., pio not in PATH) — close the fd we opened above
+          try { fs.closeSync(logFd); } catch {}
+          throw new PioMcpError(
+            ERROR_CODES.PIO_COMMAND_NOT_FOUND,
+            `Failed to start pio device monitor: ${spawnErr.message}`,
+            { port: params.port, baud: params.baud },
+          );
+        }
 
         // Capture stderr for startup errors (e.g., permission denied)
         let stderrBuf = '';
@@ -188,7 +199,7 @@ export function registerMonitorTools(server, ctx) {
               exitCode: child.exitCode,
               message: `Monitor failed: ${errMsg}`,
             });
-            server.sendLoggingMessage?.({
+            server.server?.sendLoggingMessage?.({
               level: 'error',
               data: { task_id: taskId, event: 'monitor_failed', error: errMsg },
             });

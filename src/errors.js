@@ -121,7 +121,8 @@ export function assertEnvExists(projectDir, envName) {
   const iniPath = path.join(projectDir, 'platformio.ini');
   const iniContent = fs.readFileSync(iniPath, 'utf8');
 
-  const envSectionPattern = /\[env:(\w+)\]/g;
+  // Match env names including hyphens (e.g., [env:my-env], [env:esp32-s3])
+  const envSectionPattern = /\[env:([\w][\w-]*)\]/g;
   const envs = [];
   let match;
   while ((match = envSectionPattern.exec(iniContent)) !== null) {

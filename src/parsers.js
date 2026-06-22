@@ -176,16 +176,23 @@ export function parseMultiLineGCCNotes(output, projectDir = '', existingDiagnost
     });
   }
 
-  // Second pass: attach notes to matching diagnostics
+  // Second pass: attach notes to matching diagnostics (closest match, not just first)
   for (const note of noteLines) {
-    const parent = existingDiagnostics.find(
-      (d) =>
-        d.file === note.file &&
-        Math.abs((d.line || 0) - note.line) <= 1,
-    );
-    if (parent) {
-      if (!parent.notes) parent.notes = [];
-      parent.notes.push(note.message);
+    let bestParent = null;
+    let bestDist = Infinity;
+
+    for (const d of existingDiagnostics) {
+      if (d.file !== note.file) continue;
+      const dist = Math.abs((d.line || 0) - note.line);
+      if (dist <= 1 && dist < bestDist) {
+        bestParent = d;
+        bestDist = dist;
+      }
+    }
+
+    if (bestParent) {
+      if (!bestParent.notes) bestParent.notes = [];
+      bestParent.notes.push(note.message);
     } else {
       // No matching parent — add as standalone note diagnostic
       existingDiagnostics.push({

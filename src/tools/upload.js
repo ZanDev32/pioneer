@@ -181,7 +181,7 @@ export function registerUploadTools(server, ctx) {
                 ? `Upload to ${portLabel} complete`
                 : `Upload to ${portLabel} failed (exit ${exitCode})`,
             });
-            server.sendLoggingMessage?.({ level: result.success ? 'info' : 'error', data: { task_id: taskId, event: 'upload_complete' } });
+            server.server?.sendLoggingMessage?.({ level: result.success ? 'info' : 'error', data: { task_id: taskId, event: 'upload_complete' } });
           });
 
           return {
