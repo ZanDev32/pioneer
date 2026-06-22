@@ -36,8 +36,17 @@ When the MCP server is available, call tools directly. This is the fastest path 
 | `pio_build` | Build firmware for a specified environment |
 | `pio_upload` | Upload firmware to a connected device |
 | `pio_clean` | Remove build artifacts for a specific environment |
+| `pio_list_devices` | Discover connected serial, logical, or mDNS devices |
+| `pio_list_boards` | List project environments with board/platform/framework from platformio.ini |
+| `pio_task_status` | Poll a background (async) operation for progress and results |
+| `pio_task_list` | List all currently running background tasks |
+| `pio_serial_start` | Start a serial monitor daemon spooling to disk |
+| `pio_serial_stop` | Stop a running serial monitor daemon |
+| `pio_serial_read` | Read tail of serial monitor log file with optional regex filter |
+| `pio_check` | Run static code analysis (cppcheck/clangtidy/pvs-studio) |
+| `pio_run_tests` | Run PlatformIO unit tests with structured results |
 
-**Usage:** Call the tool with parameters as documented in the Tool Reference section below. No confirmation needed for `pio_build` or `pio_clean`. **ALWAYS confirm with the user before `pio_upload`** (see Safety Rules).
+**Usage:** Call the tool with parameters as documented in the Tool Reference section below. No confirmation needed for `pio_build`, `pio_clean`, `pio_check`, or `pio_run_tests`. **ALWAYS confirm with the user before `pio_upload`** (see Safety Rules).
 
 ### 🟡 Tier 2 (Self-Healing): Detect-Then-Install
 
@@ -106,7 +115,7 @@ The MCP server uses structured JSON-RPC error codes. Know these to interpret fai
 
 ## Tool Reference
 
-Complete parameter reference for all 3 MCP tools from `pioarduino-mcp-server`.
+Complete parameter reference for all 12 MCP tools from `pioarduino-mcp-server`.
 
 ### `pio_build`
 
@@ -119,8 +128,9 @@ Builds firmware and returns structured diagnostics (not raw logs).
 | `verbose` | boolean | No | `false` | Include full build output when true |
 | `build_only` | boolean | No | `false` | Generate `compile_commands.json` for IDE integration without full build |
 | `incremental` | boolean | No | `false` | Only return diagnostics for files modified since last build |
+| `async` | boolean | No | `false` | Run in background; returns `task_id` — poll with `pio_task_status` |
 
-**Returns:** `{ success, exit_code, diagnostics, summary, metadata }`
+**Returns:** `{ success, exit_code, diagnostics, summary, metadata }` or `{ task_id, status, message }` when async
 - `diagnostics`: Array of `{ file, line, column, type, message, category }`
 - `summary`: Human-readable string (e.g., "2 errors, 3 warnings")
 - `metadata`: `{ duration_seconds, binary_size_bytes, memory: { ram_percent, flash_percent, ... } }`
@@ -135,8 +145,9 @@ Uploads firmware to a connected device.
 | `environment` | string | No | `default_envs` from platformio.ini | Build environment name |
 | `port` | string | No | auto-detected | Serial port (e.g., `/dev/ttyUSB0`, `COM3`) |
 | `verbose` | boolean | No | `false` | Include full upload output when true |
+| `async` | boolean | No | `false` | Run in background; returns `task_id` — poll with `pio_task_status` |
 
-**Returns:** `{ success, exit_code, diagnostics, summary, metadata }`
+**Returns:** `{ success, exit_code, diagnostics, summary, metadata }` or `{ task_id, status, message }` when async
 
 ### `pio_clean`
 
@@ -149,6 +160,116 @@ Removes build artifacts for a specific environment. Per-environment only — saf
 | `verbose` | boolean | No | `false` | Include full output when true |
 
 **Returns:** `{ success, environment, bytes_freed }`
+
+### `pio_list_devices`
+
+Discovers connected serial, logical, or mDNS devices detected by PlatformIO.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_dir` | string | No | workspace root | Path to the PIO project (optional — listing is system-wide) |
+| `filter` | enum | No | `serial` | `serial`, `logical`, or `mdns` |
+
+**Returns:** `{ success, filter, devices: [{ port, hwid, description, type }], count }`
+**Use when:** Finding which port a board is connected to before `pio_upload` or `pio_serial_start`.
+
+### `pio_list_boards`
+
+Lists build environments from `platformio.ini` with their board/platform/framework.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_dir` | string | No | workspace root | Path to the PIO project |
+
+**Returns:** `{ success, environments: [{ env, board, platform, framework }], default_envs, count }`
+**Use when:** Discovering which environments exist before building or cleaning.
+
+### `pio_task_status`
+
+Polls the status of a background (async) operation.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_id` | string | **Yes** | — | Task ID returned from an async operation |
+
+**Returns:** `{ id, type, status, message, exit_code, elapsed_seconds, result, meta }`
+- `status`: `running` | `completed` | `failed` | `cancelled` | `stopped`
+
+### `pio_task_list`
+
+Lists all currently running background tasks. No parameters.
+**Returns:** `{ running_tasks: Array, count: number }`
+
+### `pio_serial_start`
+
+Starts a serial monitor daemon. Spools `pio device monitor` output to a log file at `<project>/.pio/monitor-<port>.log`.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_dir` | string | No | workspace root | Path to the PIO project |
+| `environment` | string | No | — | Inherits monitor settings from platformio.ini |
+| `port` | string | No | auto-detected | Serial port (e.g., `/dev/ttyUSB0`, `COM3`) |
+| `baud` | number | No | `115200` | Baud rate |
+
+**Returns:** `{ success, task_id, log_file, pid, port, baud }`
+**Lifecycle:** Use `pio_serial_read` to inspect, `pio_serial_stop` to halt.
+
+### `pio_serial_stop`
+
+Stops a running serial monitor daemon. Returns a summary.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_id` | string | **Yes** | — | Task ID from `pio_serial_start` |
+| `delete_log` | boolean | No | `false` | Delete log file after stopping |
+
+**Returns:** `{ success, task_id, killed, log_file, lines_captured, duration_seconds }`
+
+### `pio_serial_read`
+
+Reads the last N lines of a serial monitor log file with optional regex filter.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_id` | string | No | — | Monitor task ID (auto-resolves log file) |
+| `log_file` | string | No | — | Direct log file path |
+| `lines` | number | No | `100` | Lines from end |
+| `search_pattern` | string | No | — | JS regex filter (applied before tail) |
+
+**Returns:** `{ success, log_file, lines_read, total_lines, search_pattern, lines: string[] }`
+
+### `pio_check`
+
+Static code analysis. Supports cppcheck, clangtidy, pvs-studio.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_dir` | string | No | workspace root | Path to the PIO project |
+| `environment` | string | No | all | Environment to check |
+| `tool` | enum | No | platformio.ini `check_tool` | `cppcheck`, `clangtidy`, or `pvs-studio` |
+| `severity` | enum | No | `low` (all) | Minimum: `high`, `medium`, `low` |
+| `verbose` | boolean | No | `false` | Include tool output details |
+
+**Returns:** `{ success, exit_code, tools_run, total_defects, diagnostics, summary }`
+- `diagnostics`: Array of `{ file, line, column, type, message, severity, id, cwe, tool, env }`
+- PVS-Studio requires a commercial license; license errors reported gracefully.
+
+### `pio_run_tests`
+
+Runs PlatformIO unit tests with structured pass/fail results.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_dir` | string | No | workspace root | Path to the PIO project |
+| `environment` | string | No | all | Environment to test |
+| `filter` | string | No | — | Test name/pattern filter |
+| `timeout_seconds` | number | No | `300` | Timeout (increase for large suites) |
+| `verbose` | boolean | No | `false` | Include raw output |
+| `async` | boolean | No | `false` | Run in background; returns `task_id` |
+
+**Returns:** `{ success, exit_code, results, summary }` or `{ task_id, status, message }` when async
+- `results`: Structured JSON (null if PIO doesn't support `--json-output-path`)
+- `summary`: e.g., "3 suites, 12 passed, 1 failed"
 
 ---
 
