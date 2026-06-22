@@ -9,7 +9,6 @@
 import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
-import { exec } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -17,34 +16,7 @@ import {
   assertPioProject,
   assertWithinWorkspace,
 } from '../errors.js';
-
-// ---------------------------------------------------------------------------
-// PIO command executor (local copy for isolation)
-// ---------------------------------------------------------------------------
-
-function runPioCommand(args, options) {
-  return new Promise((resolve, reject) => {
-    const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
-    exec(cmd, {
-      cwd: options.projectDir,
-      maxBuffer: 10 * 1024 * 1024, // 10MB — discovery output is small
-      env: { ...process.env },
-    }, (error, stdout, stderr) => {
-      if (error) {
-        reject({
-          code: error.code || 1,
-          stdout,
-          stderr,
-          combined: (stdout || '') + '\n' + (stderr || ''),
-          message: error.message,
-        });
-      } else {
-        resolve({ stdout, stderr, exitCode: 0 });
-      }
-    });
-  });
-}
+import { runPioCommand } from '../utils.js';
 
 // ---------------------------------------------------------------------------
 // platformio.ini parser (simple, no deps)

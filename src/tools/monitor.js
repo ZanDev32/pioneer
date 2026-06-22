@@ -54,6 +54,9 @@ function ensurePioDir(projectDir) {
 /**
  * Read last N lines of a file, with optional regex filter.
  *
+ * For files > 50MB, reads only the tail portion to avoid loading the entire
+ * file into memory (serial monitors running for hours can produce GB-sized logs).
+ *
  * @param {string} filePath
  * @param {number} lineCount
  * @param {string} [pattern] — regex pattern string
@@ -62,7 +65,25 @@ function ensurePioDir(projectDir) {
 function tailFile(filePath, lineCount, pattern) {
   if (!fs.existsSync(filePath)) return [];
 
-  const content = fs.readFileSync(filePath, 'utf8');
+  const MAX_READ_BYTES = 50 * 1024 * 1024; // 50MB cap
+  const stat = fs.statSync(filePath);
+
+  let content;
+  if (stat.size > MAX_READ_BYTES) {
+    // Read only the tail portion — avoids loading GBs into heap
+    const fd = fs.openSync(filePath, 'r');
+    const start = stat.size - MAX_READ_BYTES;
+    const buffer = Buffer.alloc(MAX_READ_BYTES);
+    fs.readSync(fd, buffer, 0, MAX_READ_BYTES, start);
+    fs.closeSync(fd);
+    content = buffer.toString('utf8');
+    // Skip the first (potentially partial) line — could be mid-line
+    const firstNewline = content.indexOf('\n');
+    if (firstNewline >= 0) content = content.slice(firstNewline + 1);
+  } else {
+    content = fs.readFileSync(filePath, 'utf8');
+  }
+
   let lines = content.split('\n').filter((l) => l.length > 0);
 
   // Apply regex filter first (before tail) to avoid cutting filtered output

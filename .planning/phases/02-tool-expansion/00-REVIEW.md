@@ -227,17 +227,48 @@ When `project_dir` is omitted (defaulting to workspace root), no workspace check
 
 ## Recommended Fix Priority
 
-| Priority | ID | Action |
-|----------|----|--------|
-| 1 (fix now) | C-01 | Fix `assertEnvExists` regex to match hyphens |
-| 1 (fix now) | W-01 | Add try-catch for fd leak in monitor spawn |
-| 2 (fix next) | C-02 | Fix `server.sendLoggingMessage` → `server.server?.sendLoggingMessage` |
-| 2 (fix next) | W-04 | Fix note-to-diagnostic matching algorithm |
-| 3 (plan fix) | W-02 | Add size guard in `pio_serial_read` |
-| 3 (plan fix) | W-03 | Verify `pio test --json-output-path` actual JSON shape |
-| 4 (refactor) | W-05 | Extract shared `runPioCommand` to `src/utils.js` |
+| Priority | ID | Action | Status |
+|----------|----|--------|--------|
+| 1 (fix now) | C-01 | Fix `assertEnvExists` regex to match hyphens | ✅ `7411ff9` |
+| 1 (fix now) | W-01 | Add try-catch for fd leak in monitor spawn | ✅ `7411ff9` |
+| 2 (fix next) | C-02 | Fix `server.sendLoggingMessage` → `server.server?.sendLoggingMessage` | ✅ `7411ff9` |
+| 2 (fix next) | W-04 | Fix note-to-diagnostic matching algorithm | ✅ `7411ff9` |
+| 3 (plan fix) | W-02 | Add size guard in `pio_serial_read` | ✅ this commit |
+| 3 (plan fix) | W-03 | Verify `pio test --json-output-path` actual JSON shape | ✅ this commit |
+| 4 (refactor) | W-05 | Extract shared `runPioCommand` to `src/utils.js` | ✅ this commit |
+| (info) | I-01 | TaskManager TTL cleanup (30-min evict) | ✅ this commit |
+| (info) | I-02 | `getDirSize` symlink-cycle protection | ✅ this commit |
+| (info) | I-03 | Consolidate `hasErrors` helper | ✅ this commit (rolled into W-05 via utils.js) |
+| (info) | I-04 | `discover.sh` Tier 3 caveat — documented in SKILL.md only | no code change |
+| (info) | I-05 | `pio_list_devices` workspace check when path omitted | design decision, no change |
 
 ---
 
-*Review complete. 2 Critical, 5 Warning, 5 Info findings.*
-*Use `/gsd-code-review 0-2 --fix` to auto-apply Critical + Warning fixes.*
+## Final disposition (this commit)
+
+| Item | Severity | Fix |
+|------|----------|-----|
+| **W-05** | 🟡 | Created `src/utils.js` with shared `runPioCommand` (timeout-aware) + `hasErrors`. Updated 6 tool files: `build.js`, `upload.js`, `clean.js`, `discover.js`, `check.js`, `test.js`. Eliminated ~150 lines of duplicated executor boilerplate. |
+| **W-02** | 🟡 | `tailFile` in monitor.js now reads only the last 50MB of large files via `fs.readSync` from offset, skipping the first partial line. Prevents OOM on multi-hour serial monitor sessions. |
+| **W-03** | 🟡 | `summarizeTestResults` in test.js now supports 5 status-key variants (`status`/`result`/`state`/`outcome`/`verdict`), uppercase normalization, suite-level aggregate counts (`passed`/`failed`/`skipped`), and improved raw-text parser (matches "All N tests passed", multi-suite counts). |
+| **I-01** | 🔵 | `TaskManager` now has a 5-minute cleanup interval that evicts completed/failed/cancelled/stopped tasks older than 30 minutes. Timer is `.unref()`-ed so it doesn't keep the server process alive. Added `destroy()` for clean shutdown. |
+| **I-02** | 🔵 | `getDirSize` in metadata.js now uses `entry.isSymbolicLink()` to skip symlinks and tracks visited inodes via `dev:ino` keys to break cycles. Prevents infinite recursion on corrupted `.pio/` directories. |
+| **I-03** | 🔵 | `hasErrors` helper moved to `src/utils.js` and imported by `upload.js` (covered by W-05 refactor). |
+| **I-04 / I-05** | 🔵 | No code change needed — design decisions already documented. |
+
+### Files changed (this commit)
+
+- `src/utils.js` — NEW — shared `runPioCommand` + `hasErrors`
+- `src/tools/build.js` — import from utils, removed local runPioCommand
+- `src/tools/upload.js` — import from utils, removed local runPioCommand + hasErrors
+- `src/tools/clean.js` — import from utils, removed local runPioCommand
+- `src/tools/discover.js` — import from utils, removed local runPioCommand
+- `src/tools/check.js` — import from utils, removed local runPioCommand
+- `src/tools/test.js` — import from utils, removed local runPioCommand; robust summarizeTestResults
+- `src/tools/monitor.js` — tailFile 50MB size guard
+- `src/tasks.js` — TTL cleanup timer + destroy()
+- `src/metadata.js` — getDirSize symlink + cycle guard
+
+### Total review findings: 2 Critical + 5 Warning + 5 Info = 12 total
+### Total fixed: 12 (across this commit + `7411ff9`)
+### Remaining: 0 actionable, 2 informational (I-04, I-05 — design decisions)

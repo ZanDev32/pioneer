@@ -19,48 +19,18 @@ import {
 import { parseAllDiagnostics } from '../parsers.js';
 import { parseBuildMetadata } from '../metadata.js';
 import { summarizeDiagnostics } from './build.js';
+import { runPioCommand, hasErrors } from '../utils.js';
 
-function hasErrors(diagnostics) {
-  return diagnostics.some((d) => d.type === 'error' || d.type === 'fatal error');
-}
+// ---------------------------------------------------------------------------
+// Helper — imported from ../utils.js (hasErrors)
+// ---------------------------------------------------------------------------
 
 /**
  * Executes a pio command and captures stdout + stderr.
  *
- * @param {string[]} args
- * @param {{ projectDir: string }} options
- * @returns {Promise<{ stdout: string, stderr: string, exitCode: number }>}
+ * Uses shared `runPioCommand` from ../utils.js for the sync path.
+ * The async path below uses `exec` directly for fire-and-forget behavior.
  */
-function runPioCommand(args, options) {
-  return new Promise((resolve, reject) => {
-    const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
-    exec(cmd, {
-      cwd: options.projectDir,
-      maxBuffer: 50 * 1024 * 1024, // 50MB
-      env: { ...process.env },
-    }, (error, stdout, stderr) => {
-      const combined = (stdout || '') + '\n' + (stderr || '');
-
-      if (error) {
-        reject({
-          code: error.code || 1,
-          stdout,
-          stderr,
-          combined,
-          message: error.message,
-        });
-      } else {
-        resolve({
-          stdout,
-          stderr,
-          combined,
-          exitCode: 0,
-        });
-      }
-    });
-  });
-}
 
 /**
  * Register upload tools on the MCP server.

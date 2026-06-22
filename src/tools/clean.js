@@ -7,7 +7,6 @@
 import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
-import { exec } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -17,44 +16,7 @@ import {
   assertWithinWorkspace,
 } from '../errors.js';
 import { getDirSize } from '../metadata.js';
-
-/**
- * Executes a pio command and captures stdout + stderr.
- *
- * @param {string[]} args
- * @param {{ projectDir: string }} options
- * @returns {Promise<{ stdout: string, stderr: string, exitCode: number }>}
- */
-function runPioCommand(args, options) {
-  return new Promise((resolve, reject) => {
-    const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
-    exec(cmd, {
-      cwd: options.projectDir,
-      maxBuffer: 50 * 1024 * 1024,
-      env: { ...process.env },
-    }, (error, stdout, stderr) => {
-      const combined = (stdout || '') + '\n' + (stderr || '');
-
-      if (error) {
-        reject({
-          code: error.code || 1,
-          stdout,
-          stderr,
-          combined,
-          message: error.message,
-        });
-      } else {
-        resolve({
-          stdout,
-          stderr,
-          combined,
-          exitCode: 0,
-        });
-      }
-    });
-  });
-}
+import { runPioCommand } from '../utils.js';
 
 /**
  * Register clean tools on the MCP server.

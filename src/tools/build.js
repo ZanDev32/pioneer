@@ -20,6 +20,7 @@ import {
 } from '../errors.js';
 import { parseAllDiagnostics } from '../parsers.js';
 import { parseBuildMetadata, parseIncrementalDiagnostics } from '../metadata.js';
+import { runPioCommand } from '../utils.js';
 
 // ---------------------------------------------------------------------------
 // Tool registration
@@ -45,46 +46,8 @@ export function summarizeDiagnostics(diagnostics) {
 }
 
 // ---------------------------------------------------------------------------
-// PIO command executor (standalone)
+// PIO command executor — imported from ../utils.js (runPioCommand)
 // ---------------------------------------------------------------------------
-
-/**
- * Executes a pio command and captures stdout + stderr.
- *
- * @param {string[]} args - PIO command arguments (e.g., ['run', '-e', 'esp32dev'])
- * @param {{ projectDir: string }} options
- * @returns {Promise<{ stdout: string, stderr: string, exitCode: number }>}
- */
-function runPioCommand(args, options) {
-  return new Promise((resolve, reject) => {
-    const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
-    exec(cmd, {
-      cwd: options.projectDir,
-      maxBuffer: 50 * 1024 * 1024, // 50MB
-      env: { ...process.env },
-    }, (error, stdout, stderr) => {
-      const combined = (stdout || '') + '\n' + (stderr || '');
-
-      if (error) {
-        reject({
-          code: error.code || 1,
-          stdout,
-          stderr,
-          combined,
-          message: error.message,
-        });
-      } else {
-        resolve({
-          stdout,
-          stderr,
-          combined,
-          exitCode: 0,
-        });
-      }
-    });
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Tool registration

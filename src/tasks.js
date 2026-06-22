@@ -18,6 +18,47 @@ export class TaskManager {
   constructor() {
     /** @type {Map<string, object>} */
     this.tasks = new Map();
+
+    // TTL cleanup: evict completed/failed/cancelled/stopped tasks older than 30 minutes.
+    // Runs every 5 minutes. Prevents unbounded memory growth in long-running server sessions.
+    this._cleanupIntervalMs = 5 * 60 * 1000;
+    this._ttlMs = 30 * 60 * 1000;
+    this._cleanupTimer = setInterval(() => this.cleanup(), this._cleanupIntervalMs);
+    // Don't keep the Node process alive just for cleanup
+    if (this._cleanupTimer.unref) this._cleanupTimer.unref();
+  }
+
+  /**
+   * Remove tasks in a terminal state older than the TTL (30 min default).
+   * Called automatically on a 5-minute interval; also safe to call manually.
+   *
+   * @returns {number} number of tasks evicted
+   */
+  cleanup() {
+    const now = Date.now();
+    const terminalStatuses = new Set(['completed', 'failed', 'cancelled', 'stopped']);
+    let evicted = 0;
+    for (const [id, task] of this.tasks) {
+      if (terminalStatuses.has(task.status) && now - task.startTime > this._ttlMs) {
+        // Close child if still attached (shouldn't be, but defensive)
+        if (task.child && !task.child.killed) {
+          try { task.child.kill('SIGTERM'); } catch {}
+        }
+        this.tasks.delete(id);
+        evicted++;
+      }
+    }
+    return evicted;
+  }
+
+  /**
+   * Stop the cleanup interval. Call when shutting down the server.
+   */
+  destroy() {
+    if (this._cleanupTimer) {
+      clearInterval(this._cleanupTimer);
+      this._cleanupTimer = null;
+    }
   }
 
   /**

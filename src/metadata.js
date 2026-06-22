@@ -179,14 +179,39 @@ export function parseIncrementalDiagnostics(projectDir, envName, diagnostics) {
  * @param {string} dirPath
  * @returns {number}
  */
-export function getDirSize(dirPath) {
+/**
+ * Returns the size (in bytes) of a directory, recursively.
+ *
+ * Safely skips symlinks and uses inode tracking to detect directory cycles
+ * (prevents infinite recursion on a malformed .pio/ with symlink loops).
+ *
+ * @param {string} dirPath
+ * @param {Set<string>} [visitedInodes] — internal cycle guard (do not pass)
+ * @returns {number}
+ */
+export function getDirSize(dirPath, visitedInodes) {
   let totalSize = 0;
+  const seen = visitedInodes || new Set();
+
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name);
+
+      // Skip symlinks — would otherwise risk following cycles
+      if (entry.isSymbolicLink()) continue;
+
       if (entry.isDirectory()) {
-        totalSize += getDirSize(fullPath);
+        // Track directory inodes to detect cycles (rare but possible on FS corruption)
+        try {
+          const stat = fs.statSync(fullPath);
+          const inodeKey = `${stat.dev}:${stat.ino}`;
+          if (seen.has(inodeKey)) continue; // skip cycle
+          seen.add(inodeKey);
+        } catch {
+          continue;
+        }
+        totalSize += getDirSize(fullPath, seen);
       } else if (entry.isFile()) {
         try {
           totalSize += fs.statSync(fullPath).size;

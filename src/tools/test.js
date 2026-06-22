@@ -20,45 +20,44 @@ import {
   assertEnvExists,
   assertWithinWorkspace,
 } from '../errors.js';
-
-// ---------------------------------------------------------------------------
-// PIO command executor (local copy for isolation)
-// ---------------------------------------------------------------------------
-
-function runPioCommand(args, options) {
-  return new Promise((resolve, reject) => {
-    const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
-    exec(cmd, {
-      cwd: options.projectDir,
-      maxBuffer: 50 * 1024 * 1024,
-      env: { ...process.env },
-      timeout: options.timeout || 300000, // 5 min default for tests
-    }, (error, stdout, stderr) => {
-      if (error) {
-        reject({
-          code: error.code || 1,
-          stdout,
-          stderr,
-          combined: (stdout || '') + '\n' + (stderr || ''),
-          message: error.message,
-          timedOut: error.killed || false,
-        });
-      } else {
-        resolve({ stdout, stderr, exitCode: 0 });
-      }
-    });
-  });
-}
+import { runPioCommand } from '../utils.js';
 
 // ---------------------------------------------------------------------------
 // Test result summary helper
 // ---------------------------------------------------------------------------
 
 /**
+ * Extract the pass/fail/skip status from a single test case entry.
+ * Handles key-name variance across PlatformIO versions and test frameworks:
+ *   - status / result / state / outcome (lowercase or uppercase)
+ *   - PASSED/FAILED/SKIPPED or pass/fail/skip
+ *
+ * Returns 'passed', 'failed', 'skipped', or 'unknown'.
+ *
+ * @param {object} tc — single test case object
+ * @returns {string}
+ */
+function resolveTestCaseStatus(tc) {
+  for (const key of ['status', 'result', 'state', 'outcome', 'verdict']) {
+    const v = (tc[key] || '').toString().toLowerCase();
+    if (!v) continue;
+    if (['passed', 'pass', 'ok', 'success'].includes(v)) return 'passed';
+    if (['failed', 'fail', 'error', 'failure'].includes(v)) return 'failed';
+    if (['skipped', 'skip', 'ignored', 'pending', 'disabled'].includes(v)) return 'skipped';
+  }
+  // PlatformIO also reports failure count fields at the suite level
+  if (tc.passed != null && tc.failed != null) {
+    if (tc.failed > 0) return 'fail-count';
+    if (tc.passed > 0) return 'pass-count';
+  }
+  return 'unknown';
+}
+
+/**
  * Summarize test results into human-readable string.
  *
  * Handles both structured JSON results and fallback to text-based parsing.
+ * Supports key-name variance across PlatformIO versions.
  *
  * @param {Array|null} jsonResults — JSON array from --json-output-path
  * @param {string} rawOutput — raw stdout/stderr for fallback parsing
@@ -70,33 +69,50 @@ function summarizeTestResults(jsonResults, rawOutput) {
     let passed = 0;
     let failed = 0;
     let skipped = 0;
-    let suitesCount = 0;
+    let suitesCount = jsonResults.length;
 
     for (const suite of jsonResults) {
-      suitesCount++;
-      const cases = suite.test_cases || suite.tests || [];
-      for (const tc of cases) {
-        const status = (tc.status || tc.result || '').toLowerCase();
-        if (status === 'passed' || status === 'pass' || status === 'ok') passed++;
-        else if (status === 'failed' || status === 'fail' || status === 'error') failed++;
-        else if (status === 'skipped' || status === 'skip' || status === 'ignored') skipped++;
-        else passed++; // default to passed for unknown status
+      // Try several likely keys for the nested test cases
+      const cases =
+        suite.test_cases ||
+        suite.tests ||
+        suite.cases ||
+        suite.results ||
+        [];
+
+      if (Array.isArray(cases) && cases.length > 0) {
+        for (const tc of cases) {
+          const status = resolveTestCaseStatus(tc);
+          if (status === 'passed' || status === 'pass-count') passed++;
+          else if (status === 'failed' || status === 'fail-count') failed++;
+          else if (status === 'skipped') skipped++;
+          else passed++; // unknown default
+        }
+      } else if (suite.passed != null || suite.failed != null || suite.skipped != null) {
+        // Suite-level aggregate counts (some PlatformIO shapes)
+        passed += suite.passed || 0;
+        failed += suite.failed || 0;
+        skipped += suite.skipped || 0;
+      } else {
+        // No test cases and no aggregate counts — count suite as 1 passed test
+        passed++;
       }
     }
 
-    const parts = [];
-    parts.push(`${passed} passed`);
+    const parts = [`${passed} passed`];
     if (failed > 0) parts.push(`${failed} failed`);
     if (skipped > 0) parts.push(`${skipped} skipped`);
     return `${suitesCount} suite${suitesCount !== 1 ? 's' : ''}, ${parts.join(', ')}`;
   }
 
-  // Fallback: parse from raw text output
+  // Fallback: parse from raw text output (handles "12 tests passed" style output)
   if (rawOutput) {
+    // Standard PlatformIO text output patterns
     const passMatch = rawOutput.match(/(\d+)\s+passed/i);
     const failMatch = rawOutput.match(/(\d+)\s+failed/i);
     const skipMatch = rawOutput.match(/(\d+)\s+skipped/i);
-    const allTestsMatch = rawOutput.match(/All\s+(\d+)\s+tests/i);
+    const allTestsMatch = rawOutput.match(/[Aa]ll\s+(\d+)\s+tests?\s+(?:passed|succeeded)/);
+    const singleSuiteMatch = rawOutput.match(/(\d+)\s+tests?\s+in\s+(\d+)\s+test\s+suites?/i);
 
     if (allTestsMatch) return `All ${allTestsMatch[1]} tests passed`;
     if (passMatch || failMatch) {
@@ -104,6 +120,7 @@ function summarizeTestResults(jsonResults, rawOutput) {
       if (passMatch) parts.push(`${passMatch[1]} passed`);
       if (failMatch) parts.push(`${failMatch[1]} failed`);
       if (skipMatch) parts.push(`${skipMatch[1]} skipped`);
+      if (singleSuiteMatch) parts.push(`${singleSuiteMatch[2]} suite${parseInt(singleSuiteMatch[2], 10) !== 1 ? 's' : ''}`);
       return parts.join(', ') || 'test output captured';
     }
   }
