@@ -12,6 +12,11 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerBuildTools } from './tools/build.js';
 import { registerUploadTools } from './tools/upload.js';
 import { registerCleanTools } from './tools/clean.js';
+import { registerDiscoverTools } from './tools/discover.js';
+import { registerMonitorTools } from './tools/monitor.js';
+import { registerCheckTools } from './tools/check.js';
+import { registerTestTools } from './tools/test.js';
+import { TaskManager, registerTaskTools } from './tasks.js';
 
 // ---------------------------------------------------------------------------
 // Parse CLI arguments
@@ -62,14 +67,20 @@ async function main() {
   const server = new McpServer({
     name: 'pioarduino',
     version: process.env.npm_package_version || '0.1.0',
+    capabilities: { logging: {} },
   });
 
-  const ctx = { workspaceRoot: config.workspaceRoot };
+  const ctx = { workspaceRoot: config.workspaceRoot, taskManager: new TaskManager() };
 
   // Register all tools BEFORE connecting to transport
+  registerTaskTools(server, ctx);
   registerBuildTools(server, ctx);
   registerUploadTools(server, ctx);
   registerCleanTools(server, ctx);
+  registerDiscoverTools(server, ctx);
+  registerMonitorTools(server, ctx);
+  registerCheckTools(server, ctx);
+  registerTestTools(server, ctx);
 
   console.error('pioarduino MCP Server starting...');
   console.error(`Workspace: ${config.workspaceRoot}`);
