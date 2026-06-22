@@ -25,16 +25,16 @@
 4. **Fallback scripts** - Shell wrappers (build.sh, upload.sh, clean.sh, monitor.sh)
 5. **Safety guidelines** - Ask before flash, environment safety, port discovery first
 
-## Phase 2: Tool Expansion
+## Phase 2: Tool Expansion ✅ COMPLETED
 **Goal:** Add discovery, monitoring, and advanced tools
 
 ### Plans
-1. **pio_list_boards** - List available boards from platformio.ini environments
-2. **pio_list_devices** - List connected serial devices (serialport library)
-3. **Background tasks** - taskId polling for long-running builds/uploads
-4. **pio_check** - Static analysis integration (clang-tidy)
-5. **pio_run_tests** - Unit test execution (pio test)
-6. **Serial monitor** - Start/stop/query serial monitor with log spooling
+1. **pio_list_boards** ✅ — Parses platformio.ini for env/board/platform/framework
+2. **pio_list_devices** ✅ — Wraps `pio device list --json-output` with filter support
+3. **Background tasks** ✅ — TaskManager with `pio_task_status`/`pio_task_list`, async param on build/upload
+4. **pio_check** ✅ — Static analysis with robust JSON extraction (handles PlatformIO #4029)
+5. **pio_run_tests** ✅ — Test runner with `--json-output-path` and graceful degradation
+6. **Serial monitor** ✅ — 3-tool daemon (`pio_serial_start/stop/read`), disk-spooled to `.pio/monitor-<port>.log`
 
 ## Phase 3: Distribution & Testing
 **Goal:** Package for npm, test with multiple AI hosts
