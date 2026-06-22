@@ -76,7 +76,7 @@ function parsePlatformioIni(iniContent) {
       const section = sectionMatch[1];
       if (section === 'platformio') {
         currentEnv = '__platformio__';
-      } else if (section.startsWith('env:')) {
+    } else if (section.startsWith('env:')) {
         currentEnv = section.slice(4); // strip 'env:' prefix
         environments.push({
           env: currentEnv,
