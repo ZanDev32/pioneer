@@ -30,7 +30,7 @@ Phase 0: Standalone Server Extraction ✅ COMPLETED
 
 - **Phase 0:** ✅ COMPLETE — Server builds, starts, registers 3 tools
 - **Phase 1:** ✅ COMPLETE — SKILL.md (231 lines) + 6 shell wrappers created
-- **Phase 2:** NOT STARTED — Tool expansion
+- **Phase 2:** ◆ PLANNED — 2 plans created (Plan A: foundation/discovery, Plan B: check/test)
 - **Phase 3:** NOT STARTED — Distribution & testing
 - **Phase 4:** NOT STARTED — Competitive features
 
@@ -40,6 +40,7 @@ None
 
 ## Recent Activity
 
+- 2026-06-22: Phase 2 planned — RESEARCH.md + 2 plans (PLAN-A: foundation/discovery, PLAN-B: check/test), verification passed
 - 2026-06-22: Phase 2 context gathered — 4 gray areas discussed via advisor mode, 9 decisions captured (D-01 to D-09): device discovery (pio device list --json-output), layered background tasks (polling + MCP logging), 3-tool serial monitor, user-selectable static analysis with --json-output
 - 2026-06-21: Phase 0 completed — standalone MCP server extracted from VS Code extension
 - 2026-06-21: GSD project initialized
