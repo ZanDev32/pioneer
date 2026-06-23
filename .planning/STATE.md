@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-06-22T08:42:17.670Z"
+last_updated: "2026-06-23T22:53:14.302Z"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 2
-  completed_plans: 2
-  percent: 60
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 40
 ---
 
 # Project State
 
 ## Project Name
 
-pioarduino-mcp-server
+pioneer
 
 ## Current Cycle
 
