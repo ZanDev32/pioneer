@@ -47,6 +47,15 @@
 5. **Test suite** - Port 233 tests from extension repo, add standalone-specific tests
 6. **CI/CD** - GitHub Actions for build + test pipeline
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Package identity, dist-only tarball, version stamp, CHANGELOG, public origin
+- [ ] 03-02-PLAN.md — Vitest harness, pinned install gate, pure-function unit layer
+- [ ] 03-03-PLAN.md — Collapse the async executor bypasses, integration suite for all 12 tools
+- [ ] 03-04-PLAN.md — Canonical host-config fixtures/validator, README matrix, smoke checklist
+- [ ] 03-05-PLAN.md — Protocol lane, CI matrix, opt-in e2e job, tag-only provenance publish
+
 ## Phase 4: Competitive Features
 **Goal:** Match and exceed jl-codes/platformio-mcp feature set
 
