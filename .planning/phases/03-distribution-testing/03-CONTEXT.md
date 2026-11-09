@@ -15,10 +15,10 @@ This phase delivers **distribution readiness and quality assurance** — not new
 ## Implementation Decisions
 
 ### Package Naming & Publishing
-- **D-01:** Package name: `@ZanDev32/pioneer` (scoped under user's personal npm org). Bin entry: `pioneer` (unchanged). This keeps the brand while gaining scoped namespace protection.
+- **D-01:** Package name: `@zandev32/pioneer` (scoped under user's personal npm org). Bin entry: `pioneer` (unchanged). This keeps the brand while gaining scoped namespace protection. **Amended 2026-11-09 (D-01a):** originally `@ZanDev32/pioneer`, but npm's validator returns `validForNewPackages: false` — `"name can no longer contain capital letters"` — so the scope must be lowercase. Confirmed free on the registry (404). Unscoped `pioneer` is taken (0.11.7).
 - **D-02:** First scoped publish at `0.2.0` — bumping minor from current `0.1.0` to signal the rename as a breaking change for consumers. Single release candidate: `0.2.0-rc.1` → `0.2.0`.
-- **D-03:** Git tag trigger (`v*`) + CI publish. Pre-publish gates: `npm ci → npm run build → npm test`. Publish with `--provenance` for supply-chain attestation. `--access public` on first publish (scoped package requirement).
-- **D-04:** `"files": ["dist/"]` already in package.json — keep the allowlist approach. No `.npmignore` needed.
+- **D-03:** Git tag trigger (`v*`) + CI publish. Pre-publish gates: `npm ci → npm run build → npm test`. Publish with `--provenance` for supply-chain attestation. `--access public` on first publish (scoped package requirement). **Amended 2026-11-09 (D-03a):** `--provenance` requires `repository.url` to name a public repo the publisher controls; the clone currently has no git remote and `package.json` points at `pioarduino/pioarduino-vscode-ide`. Phase 3 creates the public repo `github.com/ZanDev32/pioneer`, sets it as `origin`, and updates `repository.url` before the first publish.
+- **D-04:** `"files": ["dist/"]` allowlist approach — no `.npmignore`. **Corrected 2026-11-09 (D-04a):** the field is *missing* from `package.json` today (`npm pack --dry-run` ships 60 files: `src/`, `.planning/`, `.agents/`), so Phase 3 must add it rather than merely keep it.
 
 ### Versioning & Release Strategy
 - **D-05:** Manual semver + Keep a Changelog (`CHANGELOG.md`). Zero tooling dependencies — `npm version patch/minor/major` creates git tag + commit. Full control over bump semantics.
