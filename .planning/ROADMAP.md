@@ -50,10 +50,17 @@
 **Plans:** 5 plans
 
 Plans:
+**Wave 1**
 - [ ] 03-01-PLAN.md — Package identity, dist-only tarball, version stamp, CHANGELOG, public origin
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-02-PLAN.md — Vitest harness, pinned install gate, pure-function unit layer
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-03-PLAN.md — Collapse the async executor bypasses, integration suite for all 12 tools
 - [ ] 03-04-PLAN.md — Canonical host-config fixtures/validator, README matrix, smoke checklist
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 03-05-PLAN.md — Protocol lane, CI matrix, opt-in e2e job, tag-only provenance publish
 
 ## Phase 4: Competitive Features
