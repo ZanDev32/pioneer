@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import path from 'path';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -118,8 +118,6 @@ export function registerBuildTools(server, ctx) {
           args.push('-t', 'compiledb');
         }
 
-        const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
         // ---------------------------------------------------------------
         // Async (background) path — return taskId immediately
         // ---------------------------------------------------------------
@@ -127,13 +125,13 @@ export function registerBuildTools(server, ctx) {
           const envLabel = params.environment || 'default';
 
           const execPromise = new Promise((resolve) => {
-            exec(cmd, {
+            execFile('pio', args, {
               cwd: projectDir,
               maxBuffer: 50 * 1024 * 1024,
               env: { ...process.env },
             }, (error, stdout, stderr) => {
               const combined = (stdout || '') + '\n' + (stderr || '');
-              const exitCode = error ? error.code || 1 : 0;
+              const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
               const diagnostics = parseAllDiagnostics(combined, projectDir);
               const fullMetadata = parseBuildMetadata(combined, projectDir, params.environment || '');
               const success = !error && !diagnostics.some((d) => d.type === 'error' || d.type === 'fatal error');

@@ -11,7 +11,7 @@ import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -192,7 +192,6 @@ export function registerTestTools(server, ctx) {
         const jsonOutputPath = path.join(pioDir, 'test-results.json');
         args.push(`--json-output-path=${jsonOutputPath}`);
 
-        const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
         const timeout = (params.timeout_seconds || 300) * 1000;
 
         // ---------------------------------------------------------------
@@ -202,14 +201,14 @@ export function registerTestTools(server, ctx) {
           const envLabel = params.environment || 'all';
 
           const execPromise = new Promise((resolve) => {
-            exec(cmd, {
+            execFile('pio', args, {
               cwd: projectDir,
               maxBuffer: 50 * 1024 * 1024,
               env: { ...process.env },
               timeout,
             }, async (error, stdout, stderr) => {
               const combined = (stdout || '') + '\n' + (stderr || '');
-              const exitCode = error ? error.code || 1 : 0;
+              const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
 
               // Try to read structured JSON results
               let jsonResults = null;

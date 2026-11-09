@@ -73,11 +73,10 @@ last_mapped_at: 2026-11-09
 
 ## Security Considerations
 
-**Shell injection through `pio_upload.port`, `pio_test.filter` and `runPioCommand`:**
-- Risk: arbitrary command execution on the host running the MCP server.
-- Files: `src/tools/upload.js:79,81` (`params.port` → `-p ${port}`), `src/tools/test.js:185,195` (`params.filter` → `-f ${filter}`), `src/utils.js:23-26`, `src/tools/build.js:121`, `src/tools/monitor.js:200`.
-- Current mitigation: quoting only when the argument already contains a space (`a.includes(' ') ? \`"${a}"\` : a`). That catches neither `p`->`; rm -rf ~` (`pio upload -p ;rm -rf ~` — no space inside the injected token if chained with `;`) nor embedded `"`/`$(...)`/backticks.
-- Recommendations: switch to `execFile('pio', args)`/`spawn('pio', args)` and delete the string concatenation entirely; validate `port` against `^(/dev/[\w./-]+|COM\d+)$` and `filter` against `^[\w .:/-]+$` at the zod layer in `src/tools/upload.js:49` and `src/tools/test.js:150`.
+**Shell injection through `pio_upload.port`, `pio_run_tests.filter` and `runPioCommand` — FIXED 2026-11-09:**
+- Was: user-supplied `port`/`filter` were concatenated into a shell string with space-only quoting, giving arbitrary host command execution (`pio run -t upload -p ;touch /tmp/pwned` created the file).
+- Fix: `src/utils.js` now uses `execFile('pio', args, …)`; `src/tools/{build,test,upload}.js` async paths pass argv arrays to `execFile`; `src/tools/monitor.js` runs `stty` via `execFile` and spawns `cat <port>` directly instead of `sh -c 'stty … && cat …'` (also removes the orphaned-`cat`-holds-the-port bug, since the tracked child is now `cat` itself).
+- Remaining hardening (optional, not required for safety): zod-layer port/filter shape validation in `src/tools/upload.js:49` and `src/tools/test.js:150`.
 
 **HTTP mode exposes unauthenticated command execution on all interfaces:**
 - Risk: anyone who can reach the port can build, clean, and upload firmware — and, via the injection above, run arbitrary host commands.

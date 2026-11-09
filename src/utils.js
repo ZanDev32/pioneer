@@ -6,12 +6,14 @@
  * `tools/discover.js`, `tools/check.js`, `tools/test.js`.
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 
 /**
  * Executes a PIO CLI command and captures stdout + stderr.
  *
- * Wraps `child_process.exec` with a large buffer and workspace-aware cwd.
+ * Wraps `child_process.execFile` (no shell) with a large buffer and
+ * workspace-aware cwd — arguments are passed as an argv array, so shell
+ * metacharacters in user-supplied values are never interpreted.
  * Resolves on exit code 0; rejects on non-zero with combined output.
  *
  * @param {string[]} args — PIO command arguments (e.g., ['run', '-e', 'esp32dev'])
@@ -20,10 +22,6 @@ import { exec } from 'child_process';
  */
 export function runPioCommand(args, options) {
   return new Promise((resolve, reject) => {
-    const cmd = `pio ${args
-      .map((a) => (a.includes(' ') ? `"${a}"` : a))
-      .join(' ')}`;
-
     const maxBuffer = options.maxBuffer ?? 50 * 1024 * 1024; // default 50MB
     const execOptions = {
       cwd: options.projectDir,
@@ -34,12 +32,12 @@ export function runPioCommand(args, options) {
     // Only pass timeout if supplied — otherwise let exec default (no limit)
     if (options.timeout) execOptions.timeout = options.timeout;
 
-    exec(cmd, execOptions, (error, stdout, stderr) => {
+    execFile('pio', args, execOptions, (error, stdout, stderr) => {
       const combined = (stdout || '') + '\n' + (stderr || '');
 
       if (error) {
         reject({
-          code: error.code || 1,
+          code: typeof error.code === 'number' ? error.code : 1,
           stdout,
           stderr,
           combined,

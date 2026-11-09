@@ -15,7 +15,7 @@ import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { spawn, exec } from 'child_process';
+import { spawn, execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -182,8 +182,9 @@ export function registerMonitorTools(server, ctx) {
           );
         }
 
-        // Spawn child — use shell pipeline to configure baud rate then read raw serial data.
-        // 'stty -F <port> <baud> raw' configures the serial port, then 'cat <port>' reads.
+        // Configure the baud rate with `stty -F <port> <baud> raw`, then read raw
+        // serial data with `cat <port>`. Both are spawned with an argv array (no
+        // shell), so the user-supplied port is never interpreted as shell syntax.
         // This avoids pio device monitor's miniterm TTY requirement.
         // Read-only monitor (no keyboard input sent to device).
         // For full interactive terminal, use pio device monitor directly in a real terminal.
@@ -197,7 +198,15 @@ export function registerMonitorTools(server, ctx) {
               { baud: params.baud },
             );
           }
-          child = spawn('sh', ['-c', `stty -F "${serialPort}" ${params.baud} raw && cat "${serialPort}"`], {
+          await new Promise((resolve, reject) => {
+            execFile(
+              'stty',
+              ['-F', serialPort, String(params.baud), 'raw'],
+              { cwd: projectDir },
+              (err, _stdout, stderr) => (err ? reject(new Error(stderr.trim() || err.message)) : resolve()),
+            );
+          });
+          child = spawn('cat', [serialPort], {
             cwd: projectDir,
             detached: true,
             stdio: ['ignore', 'pipe', 'pipe'],

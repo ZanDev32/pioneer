@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -78,8 +78,6 @@ export function registerUploadTools(server, ctx) {
         if (params.environment) args.push('-e', params.environment);
         if (params.port) args.push('-p', params.port);
 
-        const cmd = `pio ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-
         // ---------------------------------------------------------------
         // Async (background) path — return taskId immediately
         // ---------------------------------------------------------------
@@ -88,13 +86,13 @@ export function registerUploadTools(server, ctx) {
           const portLabel = params.port || 'auto';
 
           const execPromise = new Promise((resolve) => {
-            exec(cmd, {
+            execFile('pio', args, {
               cwd: projectDir,
               maxBuffer: 50 * 1024 * 1024,
               env: { ...process.env },
             }, (error, stdout, stderr) => {
               const combined = (stdout || '') + '\n' + (stderr || '');
-              const exitCode = error ? error.code || 1 : 0;
+              const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
               const success = !error;
 
               // Detect NO_DEVICE in output
