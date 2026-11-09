@@ -6,7 +6,6 @@
  */
 
 import { z } from 'zod';
-import path from 'path';
 import { exec } from 'child_process';
 import {
   PioMcpError,
@@ -14,12 +13,12 @@ import {
   wrapToolError,
   assertPioProject,
   assertEnvExists,
-  assertWithinWorkspace,
 } from '../errors.js';
 import { parseAllDiagnostics } from '../parsers.js';
 import { parseBuildMetadata } from '../metadata.js';
 import { summarizeDiagnostics } from './build.js';
 import { runPioCommand, hasErrors } from '../utils.js';
+import { resolveWorkspace } from '../workspace.js';
 
 // ---------------------------------------------------------------------------
 // Helper — imported from ../utils.js (hasErrors)
@@ -41,12 +40,8 @@ import { runPioCommand, hasErrors } from '../utils.js';
 export function registerUploadTools(server, ctx) {
   server.tool(
     'pio_upload',
-    'Upload firmware to a connected device. Returns upload status with diagnostics.',
+    'Upload (flash) firmware to a connected ESP32, Arduino, or other embedded device. Builds the project first if needed, then flashes firmware via serial port. Use after pio_build when ready to deploy, or call directly to build + flash in one step. Supports auto-detecting the serial port, selecting a specific port, async background uploads, and structured diagnostics. ALWAYS confirm with the user before flashing — this overwrites the device firmware.',
     {
-      project_dir: z
-        .string()
-        .optional()
-        .describe('Path to the PIO project. Defaults to workspace root.'),
       environment: z
         .string()
         .optional()
@@ -59,7 +54,7 @@ export function registerUploadTools(server, ctx) {
         .boolean()
         .optional()
         .default(false)
-        .describe('Include full output if true.'),
+        .describe('Include full output if true. AVOID: causes excessive token usage. Only use for debugging upload failures.'),
       async: z
         .boolean()
         .optional()
@@ -70,11 +65,8 @@ export function registerUploadTools(server, ctx) {
     },
     async (params) => {
       try {
-        const projectDir = params.project_dir
-          ? path.resolve(params.project_dir)
-          : ctx.workspaceRoot;
+        const projectDir = (await resolveWorkspace(ctx)).value;
 
-        assertWithinWorkspace(projectDir, ctx.workspaceRoot);
         assertPioProject(projectDir);
 
         if (params.environment) {

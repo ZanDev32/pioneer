@@ -280,7 +280,7 @@ description: The absolute Single Source of Truth for executing PlatformIO operat
 ## The 3-Tier Execution Hierarchy
 
 ### 🟢 Tier 1 (Preferred): MCP Server Primitives
-The `pioarduino-mcp-server` provides structured build, upload, and clean operations with token-efficient diagnostics.
+The Pioneer MCP server provides structured build, upload, and clean operations with token-efficient diagnostics.
 **You MUST ALWAYS attempt Tier 1 first:**
 1. **Build:** `pio_build` (project_dir, environment, verbose, build_only, incremental)
 2. **Upload:** `pio_upload` (project_dir, environment, port, verbose)

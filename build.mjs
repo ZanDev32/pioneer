@@ -1,5 +1,5 @@
 /**
- * Build script for pioarduino MCP server.
+ * Build script for Pioneer MCP server.
  * Bundles the server into a single file using esbuild.
  */
 

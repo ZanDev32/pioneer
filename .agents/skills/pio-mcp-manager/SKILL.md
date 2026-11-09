@@ -1,6 +1,6 @@
 ---
 name: "pio-mcp-manager"
-description: "3-tier execution hierarchy for pioarduino MCP server — MCP tools, auto-install detection, and shell fallback with safety guardrails"
+description: "3-tier execution hierarchy for Pioneer MCP server — MCP tools, auto-install detection, and shell fallback with safety guardrails"
 ---
 
 # pio-mcp-manager Skill
@@ -23,7 +23,7 @@ description: "3-tier execution hierarchy for pioarduino MCP server — MCP tools
 
 ## 3-Tier Execution Hierarchy
 
-This skill governs how you interact with the `pioarduino-mcp-server` MCP server. Always attempt the highest tier available; fall back only when the tier above is unavailable.
+This skill governs how you interact with the Pioneer MCP server. Always attempt the highest tier available; fall back only when the tier above is unavailable.
 
 ### 🟢 Tier 1 (Preferred): Direct MCP Tool Calls
 
@@ -52,9 +52,9 @@ When the MCP server is available, call tools directly. This is the fastest path 
 
 If MCP tools are not available, follow this pattern:
 
-1. **Detect:** Check if `pioarduino-mcp-server` is installed and accessible
+1. **Detect:** Check if `pioneer` is installed and accessible
 2. **Ask:** "Would you like me to install the MCP server for better build diagnostics and safety?"
-3. **Install (if user agrees):** Run `npx pioarduino-mcp-server` or `npm install -g pioarduino-mcp-server`
+3. **Install (if user agrees):** Run `npx pioneer` or `npm install -g pioneer`
 4. **Fallback:** If the user explicitly declines, proceed to Tier 3
 
 **Important:** Do NOT auto-install on every invocation. Only install when detection fails AND the user confirms.
@@ -111,11 +111,27 @@ The MCP server uses structured JSON-RPC error codes. Know these to interpret fai
 | `-32008` | `NO_DEVICE` | No serial device found |
 | `-32009` | `PIO_COMMAND_NOT_FOUND` | `pio` CLI not in PATH |
 
+### Rule 5: Token Efficiency — Never Use `verbose: true` Unless Debugging
+**NEVER** set `verbose: true` on `pio_build`, `pio_upload`, or `pio_check` unless the user explicitly asks for full output or you are diagnosing a specific linker/compiler issue.
+
+- Default (`verbose: false`) returns structured diagnostics only — 16x fewer tokens.
+- `verbose: true` returns the full raw build log — can be 10,000+ lines and waste context.
+- Only use `verbose: true` when: the user asks for it, or structured diagnostics show an error you cannot diagnose without the full log.
+- Similarly, prefer `incremental: true` over full builds when checking for errors in recently modified files.
+
+### Rule 6: Memory Usage — `include_memory: false` by Default
+**NEVER** set `include_memory: true` on `pio_build` unless the user specifically asks about RAM/Flash usage.
+
+- Default metadata includes `duration_seconds` and `binary_size_bytes` only.
+- `include_memory: true` adds RAM/Flash percentage breakdown (~200 extra tokens per build).
+- Only use when: checking memory constraints after adding large libraries, or the user asks "how much flash/RAM does this use?"
+- The `metadata` field always exists — only the `memory` sub-object is conditional.
+
 ---
 
 ## Tool Reference
 
-Complete parameter reference for all 12 MCP tools from `pioarduino-mcp-server`.
+Complete parameter reference for all 12 MCP tools from Pioneer.
 
 ### `pio_build`
 
@@ -123,17 +139,17 @@ Builds firmware and returns structured diagnostics (not raw logs).
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PlatformIO project directory |
 | `environment` | string | No | `default_envs` from platformio.ini | Build environment name (e.g., `esp32dev`) |
-| `verbose` | boolean | No | `false` | Include full build output when true |
+| `verbose` | boolean | No | `false` | Include full build output when true. **AVOID: 16x token usage.** |
 | `build_only` | boolean | No | `false` | Generate `compile_commands.json` for IDE integration without full build |
+| `include_memory` | boolean | No | `false` | Include RAM/Flash breakdown. **AVOID: ~200 extra tokens.** |
 | `incremental` | boolean | No | `false` | Only return diagnostics for files modified since last build |
 | `async` | boolean | No | `false` | Run in background; returns `task_id` — poll with `pio_task_status` |
 
 **Returns:** `{ success, exit_code, diagnostics, summary, metadata }` or `{ task_id, status, message }` when async
 - `diagnostics`: Array of `{ file, line, column, type, message, category }`
 - `summary`: Human-readable string (e.g., "2 errors, 3 warnings")
-- `metadata`: `{ duration_seconds, binary_size_bytes, memory: { ram_percent, flash_percent, ... } }`
+- `metadata`: `{ duration_seconds, binary_size_bytes, [memory: { ram_percent, flash_percent, ... }] }` (memory only when `include_memory: true`)
 
 ### `pio_upload`
 
@@ -141,7 +157,6 @@ Uploads firmware to a connected device.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PlatformIO project directory |
 | `environment` | string | No | `default_envs` from platformio.ini | Build environment name |
 | `port` | string | No | auto-detected | Serial port (e.g., `/dev/ttyUSB0`, `COM3`) |
 | `verbose` | boolean | No | `false` | Include full upload output when true |
@@ -155,7 +170,6 @@ Removes build artifacts for a specific environment. Per-environment only — saf
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PlatformIO project directory |
 | `environment` | string | **Yes** | — | Build environment to clean (e.g., `esp32dev`) |
 | `verbose` | boolean | No | `false` | Include full output when true |
 
@@ -167,7 +181,6 @@ Discovers connected serial, logical, or mDNS devices detected by PlatformIO.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PIO project (optional — listing is system-wide) |
 | `filter` | enum | No | `serial` | `serial`, `logical`, or `mdns` |
 
 **Returns:** `{ success, filter, devices: [{ port, hwid, description, type }], count }`
@@ -179,8 +192,6 @@ Lists build environments from `platformio.ini` with their board/platform/framewo
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PIO project |
-
 **Returns:** `{ success, environments: [{ env, board, platform, framework }], default_envs, count }`
 **Use when:** Discovering which environments exist before building or cleaning.
 
@@ -206,7 +217,6 @@ Starts a serial monitor daemon. Spools `pio device monitor` output to a log file
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PIO project |
 | `environment` | string | No | — | Inherits monitor settings from platformio.ini |
 | `port` | string | No | auto-detected | Serial port (e.g., `/dev/ttyUSB0`, `COM3`) |
 | `baud` | number | No | `115200` | Baud rate |
@@ -244,7 +254,6 @@ Static code analysis. Supports cppcheck, clangtidy, pvs-studio.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PIO project |
 | `environment` | string | No | all | Environment to check |
 | `tool` | enum | No | platformio.ini `check_tool` | `cppcheck`, `clangtidy`, or `pvs-studio` |
 | `severity` | enum | No | `low` (all) | Minimum: `high`, `medium`, `low` |
@@ -260,7 +269,6 @@ Runs PlatformIO unit tests with structured pass/fail results.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `project_dir` | string | No | workspace root | Path to the PIO project |
 | `environment` | string | No | all | Environment to test |
 | `filter` | string | No | — | Test name/pattern filter |
 | `timeout_seconds` | number | No | `300` | Timeout (increase for large suites) |

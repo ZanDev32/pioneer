@@ -1,4 +1,4 @@
-# pioarduino MCP Server
+# Pioneer
 
 Standalone MCP (Model Context Protocol) server for PlatformIO/pioarduino projects. Build, upload, and clean firmware projects through structured AI agent tools.
 
@@ -15,17 +15,84 @@ npm install
 For AI hosts that connect via stdio transport (Claude Desktop, Cursor, VS Code):
 
 ```bash
-pioarduino-mcp-server
+pioneer
 # or
 node dist/server.js
 ```
 
 ### HTTP Mode
 
-For remote MCP clients:
+For remote MCP clients (VS Code, Cursor, etc.):
 
 ```bash
-pioarduino-mcp-server --port 3000
+pioneer --port 3000
+# or
+PORT=3000 pioneer
+# or with a specific workspace
+pioneer --port 3000 --workspace /path/to/pio/project
+```
+
+## Adding to VS Code as a Remote MCP
+
+### Option 1: HTTP Mode (Recommended for Remote)
+
+1. **Start the MCP server** on a port:
+   ```bash
+   pioneer --port 3000 --workspace /path/to/pio/project
+   ```
+
+2. **Configure VS Code** in your workspace `.vscode/mcp.json` (or user settings):
+   ```json
+   {
+     "servers": {
+       "pioneer": {
+         "type": "http",
+         "url": "http://localhost:3000"
+       }
+     }
+   }
+   ```
+
+3. **Restart VS Code** — the Pioneer tools will appear in the Copilot chat.
+
+### Option 2: Stdio Mode (Local Projects)
+
+For projects in your current workspace, use stdio mode in `.vscode/mcp.json`:
+```json
+{
+  "servers": {
+    "pioneer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/absolute/path/to/pioneer/dist/server.js",
+        "--workspace",
+        "${workspaceFolder}"
+      ]
+    }
+  }
+}
+```
+
+> **Note**: `command` must be an absolute path or a globally installed binary. Using `node dist/server.js` with a relative path won't work — resolve it to the full path.
+
+### Option 3: Global Install
+
+```bash
+cd /path/to/pioneer && npm install -g .
+```
+
+Then reference it in `.vscode/mcp.json`:
+```json
+{
+  "servers": {
+    "pioneer": {
+      "type": "stdio",
+      "command": "pioneer",
+      "args": ["--workspace", "${workspaceFolder}"]
+    }
+  }
+}
 ```
 
 ### Environment Variables

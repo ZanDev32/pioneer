@@ -1,10 +1,10 @@
 {
-  "name": "pioarduino-mcp-server",
+  "name": "pioneer",
   "version": "0.1.0",
   "description": "Standalone MCP server for pioarduino/PlatformIO — build, upload, clean, and more for embedded firmware projects",
   "type": "module",
   "bin": {
-    "pioarduino-mcp-server": "./dist/server.js"
+    "pioneer": "./dist/server.js"
   },
   "main": "./dist/server.js",
   "scripts": {

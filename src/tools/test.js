@@ -18,9 +18,9 @@ import {
   wrapToolError,
   assertPioProject,
   assertEnvExists,
-  assertWithinWorkspace,
 } from '../errors.js';
 import { runPioCommand } from '../utils.js';
+import { resolveWorkspace } from '../workspace.js';
 
 // ---------------------------------------------------------------------------
 // Test result summary helper
@@ -143,10 +143,6 @@ export function registerTestTools(server, ctx) {
     'pio_run_tests',
     'Run PlatformIO unit tests for a project. Returns structured pass/fail results per test suite. Use to verify code correctness before build and upload. Supports both native (desktop) and target device testing.',
     {
-      project_dir: z
-        .string()
-        .optional()
-        .describe('Path to the PIO project. Defaults to workspace root.'),
       environment: z
         .string()
         .optional()
@@ -175,11 +171,8 @@ export function registerTestTools(server, ctx) {
     },
     async (params) => {
       try {
-        const projectDir = params.project_dir
-          ? path.resolve(params.project_dir)
-          : ctx.workspaceRoot;
+        const projectDir = (await resolveWorkspace(ctx)).value;
 
-        assertWithinWorkspace(projectDir, ctx.workspaceRoot);
         assertPioProject(projectDir);
 
         if (params.environment) {

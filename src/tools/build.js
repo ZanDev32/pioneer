@@ -16,11 +16,11 @@ import {
   wrapToolError,
   assertPioProject,
   assertEnvExists,
-  assertWithinWorkspace,
 } from '../errors.js';
 import { parseAllDiagnostics } from '../parsers.js';
 import { parseBuildMetadata, parseIncrementalDiagnostics } from '../metadata.js';
 import { runPioCommand } from '../utils.js';
+import { resolveWorkspace } from '../workspace.js';
 
 // ---------------------------------------------------------------------------
 // Tool registration
@@ -64,12 +64,6 @@ export function registerBuildTools(server, ctx) {
     'pio_build',
     'Build a PlatformIO project for a specified environment. Returns build status with structured warnings and errors (not raw logs). Use this to get token-efficient build diagnostics.',
     {
-      project_dir: z
-        .string()
-        .optional()
-        .describe(
-          'Path to the PIO project. Defaults to workspace root.',
-        ),
       environment: z
         .string()
         .optional()
@@ -80,12 +74,17 @@ export function registerBuildTools(server, ctx) {
         .boolean()
         .optional()
         .default(false)
-        .describe('Include full build output if true.'),
+        .describe('Include full build output if true. AVOID: causes 16x token usage. Only use when diagnosing linker/compiler issues.'),
       build_only: z
         .boolean()
         .optional()
         .default(false)
         .describe('Generate compilation database (compile_commands.json) for IDE integration without full build.'),
+      include_memory: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('Include RAM/Flash usage breakdown. AVOID: adds ~200 tokens per build. Only use when checking resource constraints.'),
       incremental: z
         .boolean()
         .optional()
@@ -101,13 +100,8 @@ export function registerBuildTools(server, ctx) {
     },
     async (params) => {
       try {
-        // Resolve project directory
-        const projectDir = params.project_dir
-          ? path.resolve(params.project_dir)
-          : ctx.workspaceRoot;
+        const projectDir = (await resolveWorkspace(ctx)).value;
 
-        // Validate project structure
-        assertWithinWorkspace(projectDir, ctx.workspaceRoot);
         assertPioProject(projectDir);
 
         // Validate environment if specified
@@ -141,8 +135,16 @@ export function registerBuildTools(server, ctx) {
               const combined = (stdout || '') + '\n' + (stderr || '');
               const exitCode = error ? error.code || 1 : 0;
               const diagnostics = parseAllDiagnostics(combined, projectDir);
-              const metadata = parseBuildMetadata(combined, projectDir, params.environment || '');
+              const fullMetadata = parseBuildMetadata(combined, projectDir, params.environment || '');
               const success = !error && !diagnostics.some((d) => d.type === 'error' || d.type === 'fatal error');
+
+              // Conditionally include memory — discouraged to reduce token usage
+              const metadata = params.include_memory
+                ? fullMetadata
+                : {
+                    duration_seconds: fullMetadata.duration_seconds,
+                    binary_size_bytes: fullMetadata.binary_size_bytes,
+                  };
 
               resolve({
                 exitCode,
@@ -235,11 +237,19 @@ export function registerBuildTools(server, ctx) {
         const summary = summarizeDiagnostics(diagnostics);
 
         // Extract build metadata (duration, memory, binary size)
-        const metadata = parseBuildMetadata(
+        const fullMetadata = parseBuildMetadata(
           rawOutput,
           projectDir,
           params.environment || '',
         );
+
+        // Conditionally include memory — discouraged to reduce token usage
+        const metadata = params.include_memory
+          ? fullMetadata
+          : {
+              duration_seconds: fullMetadata.duration_seconds,
+              binary_size_bytes: fullMetadata.binary_size_bytes,
+            };
 
         // Build result object
         const result = {

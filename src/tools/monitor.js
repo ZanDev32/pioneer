@@ -6,7 +6,8 @@
  *   - `pio_serial_stop` — kills the daemon, returns summary
  *   - `pio_serial_read` — reads tail of log file with optional regex filter
  *
- * Log file location: <projectDir>/.pio/monitor-<port-slug>.log
+ * Log file location: <projectDir>/.logs/<portSlug>_<YYYY_MM_DD.HH.mm.ss.SSS>.log
+ * Example: /home/user/project/.logs/ttyACM0_2026_06_23.14.30.45.123.log
  * This is disk-spooled (not in-memory) for crash resilience and audit trail (D-06).
  */
 
@@ -22,6 +23,7 @@ import {
   assertPioProject,
   assertWithinWorkspace,
 } from '../errors.js';
+import { resolveWorkspace } from '../workspace.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,15 +42,38 @@ function slugifyPort(port) {
 }
 
 /**
- * Ensure the .pio directory exists in projectDir.
+ * Generate a timestamp string for log file naming.
+ * Format: YYYY_MM_DD.HH.mm.ss.SSS
+ *
+ * @returns {string}
+ */
+function formatTimestamp() {
+  const now = new Date();
+  const pad = (n, len = 2) => String(n).padStart(len, '0');
+  return [
+    now.getFullYear(),
+    pad(now.getMonth() + 1),
+    pad(now.getDate()),
+  ].join('_') + '.' + [
+    pad(now.getHours()),
+    pad(now.getMinutes()),
+    pad(now.getSeconds()),
+    pad(now.getMilliseconds(), 3),
+  ].join('.');
+}
+
+/**
+ * Ensure the .logs/ directory exists in projectDir.
  *
  * @param {string} projectDir
+ * @returns {string} The path to the .logs directory
  */
-function ensurePioDir(projectDir) {
-  const pioDir = path.join(projectDir, '.pio');
-  if (!fs.existsSync(pioDir)) {
-    fs.mkdirSync(pioDir, { recursive: true });
+function ensureLogsDir(projectDir) {
+  const logsDir = path.join(projectDir, '.logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
   }
+  return logsDir;
 }
 
 /**
@@ -116,12 +141,8 @@ export function registerMonitorTools(server, ctx) {
   // -------------------------------------------------------------------------
   server.tool(
     'pio_serial_start',
-    'Start a serial monitor daemon in the background. Spoons pio device monitor output to a log file at <project>/.pio/monitor-<port>.log. Use pio_serial_read to inspect and pio_serial_stop to halt.',
+    'Start a serial monitor daemon in the background. Spools pio device monitor output to a log file at <project>/.logs/<port>_<timestamp>.log. Use pio_serial_read to inspect and pio_serial_stop to halt.',
     {
-      project_dir: z
-        .string()
-        .optional()
-        .describe('Path to the PIO project. Defaults to workspace root.'),
       environment: z
         .string()
         .optional()
@@ -139,58 +160,68 @@ export function registerMonitorTools(server, ctx) {
     },
     async (params) => {
       try {
-        const projectDir = params.project_dir
-          ? path.resolve(params.project_dir)
-          : ctx.workspaceRoot;
+        const projectDir = (await resolveWorkspace(ctx)).value;
 
-        assertWithinWorkspace(projectDir, ctx.workspaceRoot);
         assertPioProject(projectDir);
-        ensurePioDir(projectDir);
+        ensureLogsDir(projectDir);
 
         const portSlug = slugifyPort(params.port);
-        const logPath = path.join(projectDir, '.pio', `monitor-${portSlug}.log`);
+        const timestamp = formatTimestamp();
+        const logPath = path.join(projectDir, '.logs', `${portSlug}_${timestamp}.log`);
 
-        // Build pio device monitor args
-        const pioArgs = ['device', 'monitor'];
-        pioArgs.push('-b', String(params.baud));
-        if (params.port) pioArgs.push('-p', params.port);
-        if (params.environment) pioArgs.push('-e', params.environment);
-
-        // Open log file for append
-        let logFd;
+        // Create a write stream with no buffering for immediate disk writes
+        let logStream;
         try {
-          logFd = fs.openSync(logPath, 'a');
-          fs.writeSync(logFd, `\n--- monitor started ${new Date().toISOString()} (baud=${params.baud}) ---\n`);
+          logStream = fs.createWriteStream(logPath, { flags: 'a', highWaterMark: 0 });
+          logStream.write(`\n--- monitor started ${new Date().toISOString()} (baud=${params.baud}) ---\n`);
         } catch (err) {
           throw new PioMcpError(
             ERROR_CODES.INTERNAL_ERROR,
-            `Cannot open log file ${logPath}: ${err.message}`,
+            `Cannot create log file ${logPath}: ${err.message}`,
             { log_path: logPath },
           );
         }
 
-        // Spawn detached child — stdout goes to log file, stderr to pipe (for permission errors)
+        // Spawn child — use shell pipeline to configure baud rate then read raw serial data.
+        // 'stty -F <port> <baud> raw' configures the serial port, then 'cat <port>' reads.
+        // This avoids pio device monitor's miniterm TTY requirement.
+        // Read-only monitor (no keyboard input sent to device).
+        // For full interactive terminal, use pio device monitor directly in a real terminal.
         let child;
+        const serialPort = params.port;
         try {
-          child = spawn('pio', pioArgs, {
+          if (!serialPort) {
+            throw new PioMcpError(
+              ERROR_CODES.NO_DEVICE,
+              'Serial port is required for non-interactive monitoring. Specify a port (e.g., /dev/ttyUSB0).',
+              { baud: params.baud },
+            );
+          }
+          child = spawn('sh', ['-c', `stty -F "${serialPort}" ${params.baud} raw && cat "${serialPort}"`], {
             cwd: projectDir,
             detached: true,
-            stdio: ['ignore', logFd, 'pipe'],
+            stdio: ['ignore', 'pipe', 'pipe'],
           });
         } catch (spawnErr) {
-          // spawn failed (e.g., pio not in PATH) — close the fd we opened above
-          try { fs.closeSync(logFd); } catch {}
+          if (spawnErr instanceof PioMcpError) throw spawnErr;
+          logStream.end();
           throw new PioMcpError(
-            ERROR_CODES.PIO_COMMAND_NOT_FOUND,
-            `Failed to start pio device monitor: ${spawnErr.message}`,
-            { port: params.port, baud: params.baud },
+            ERROR_CODES.INTERNAL_ERROR,
+            `Failed to start serial monitor: ${spawnErr.message}`,
+            { port: serialPort, baud: params.baud },
           );
         }
+
+        // Pipe stdout to log stream — immediate writes, no buffering
+        child.stdout?.on('data', (data) => {
+          logStream.write(data);
+        });
 
         // Capture stderr for startup errors (e.g., permission denied)
         let stderrBuf = '';
         child.stderr?.on('data', (data) => {
           stderrBuf += data.toString();
+          logStream.write(data); // Also log stderr
         });
 
         // Unref so the MCP server can exit without killing the monitor
@@ -237,8 +268,8 @@ export function registerMonitorTools(server, ctx) {
               message: code === 0 ? 'Monitor stopped (device disconnected)' : `Monitor exited with code ${code}`,
             });
           }
-          // Close log file descriptor
-          try { fs.closeSync(logFd); } catch {}
+          // Close log stream
+          logStream.end();
         });
 
         return {
@@ -446,7 +477,7 @@ export function registerMonitorTools(server, ctx) {
         // Workspace boundary check on log file
         const projectDir = fromTask
           ? ctx.taskManager.getRaw(params.task_id)?.meta?.projectDir
-          : ctx.workspaceRoot;
+          : (await resolveWorkspace(ctx)).value;
         if (projectDir) {
           assertWithinWorkspace(path.resolve(logPath), projectDir);
         }

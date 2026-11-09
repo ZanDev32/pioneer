@@ -18,5 +18,6 @@
     "brave_search": false,
     "firecrawl": false,
     "exa_search": false
-  }
+  },
+  "response_language": "English"
 }

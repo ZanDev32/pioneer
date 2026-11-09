@@ -16,9 +16,9 @@ import {
   wrapToolError,
   assertPioProject,
   assertEnvExists,
-  assertWithinWorkspace,
 } from '../errors.js';
 import { runPioCommand } from '../utils.js';
+import { resolveWorkspace } from '../workspace.js';
 
 // ---------------------------------------------------------------------------
 // JSON extraction helper (handles PlatformIO #4029 noise)
@@ -90,10 +90,6 @@ export function registerCheckTools(server, ctx) {
     'pio_check',
     'Run static code analysis on a PlatformIO project. Supports cppcheck, clangtidy, and pvs-studio. Returns structured defect results (severity, message, file, line). Use to catch bugs and style issues before build.',
     {
-      project_dir: z
-        .string()
-        .optional()
-        .describe('Path to the PIO project. Defaults to workspace root.'),
       environment: z
         .string()
         .optional()
@@ -110,15 +106,12 @@ export function registerCheckTools(server, ctx) {
         .boolean()
         .optional()
         .default(false)
-        .describe('Include tool output details if true.'),
+        .describe('Include tool output details if true. AVOID: causes excessive token usage. Only use when full output is needed for debugging.'),
     },
     async (params) => {
       try {
-        const projectDir = params.project_dir
-          ? path.resolve(params.project_dir)
-          : ctx.workspaceRoot;
+        const projectDir = (await resolveWorkspace(ctx)).value;
 
-        assertWithinWorkspace(projectDir, ctx.workspaceRoot);
         assertPioProject(projectDir);
 
         if (params.environment) {

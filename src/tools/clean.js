@@ -13,10 +13,10 @@ import {
   wrapToolError,
   assertPioProject,
   assertEnvExists,
-  assertWithinWorkspace,
 } from '../errors.js';
 import { getDirSize } from '../metadata.js';
 import { runPioCommand } from '../utils.js';
+import { resolveWorkspace } from '../workspace.js';
 
 /**
  * Register clean tools on the MCP server.
@@ -29,10 +29,6 @@ export function registerCleanTools(server, ctx) {
     'pio_clean',
     'Clean build artifacts for a specific PlatformIO environment. Per-environment only (safe for multi-env projects).',
     {
-      project_dir: z
-        .string()
-        .optional()
-        .describe('Path to the PIO project. Defaults to workspace root.'),
       environment: z
         .string()
         .describe('Build environment to clean (e.g., "esp32dev"). Required.'),
@@ -44,11 +40,8 @@ export function registerCleanTools(server, ctx) {
     },
     async (params) => {
       try {
-        const projectDir = params.project_dir
-          ? path.resolve(params.project_dir)
-          : ctx.workspaceRoot;
+        const projectDir = (await resolveWorkspace(ctx)).value;
 
-        assertWithinWorkspace(projectDir, ctx.workspaceRoot);
         assertPioProject(projectDir);
         assertEnvExists(projectDir, params.environment);
 

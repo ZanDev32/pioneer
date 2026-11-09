@@ -73,20 +73,53 @@ export function wrapToolError(err) {
  * Validates that the given project directory is within the workspace root.
  * Prevents MCP clients from targeting arbitrary filesystem paths.
  *
- * Throws `PioMcpError` with code `PROJECT_OUTSIDE_WORKSPACE` if not.
+ * When `ctx.workspaceFixed` is `true` (server started with `--workspace`
+ * or `PIO_WORKSPACE_ROOT`), this enforces the boundary check. When `false`
+ * (workspace resolved lazily via MCP `roots` capability, or HTTP mode
+ * without fixed workspace), this only validates that the path exists and
+ * contains a valid PlatformIO project — the root is trusted because it
+ * came from the host client.
  *
- * @param {string} projectDir — Absolute path to the project directory
- * @param {string} workspaceRoot — Absolute path to the workspace root
+ * @param {string} projectDir - Absolute path to the project directory
+ * @param {string} workspaceRoot - Absolute path to the workspace root
+ * @param {object} [ctx] - Optional context with `workspaceFixed` boolean
  */
-export function assertWithinWorkspace(projectDir, workspaceRoot) {
-  const resolvedProject = path.resolve(projectDir);
-  const resolvedWorkspace = path.resolve(workspaceRoot);
-  if (!resolvedProject.startsWith(resolvedWorkspace + path.sep) && resolvedProject !== resolvedWorkspace) {
-    throw new PioMcpError(
-      ERROR_CODES.PROJECT_OUTSIDE_WORKSPACE,
-      `Project path '${projectDir}' is outside the workspace root '${workspaceRoot}'.`,
-      { projectDir, workspaceRoot },
-    );
+export function assertWithinWorkspace(projectDir, workspaceRoot, ctx) {
+  const workspaceFixed = ctx?.workspaceFixed ?? true;
+
+  if (workspaceFixed) {
+    // Strict mode: project must be within workspace root
+    const resolvedProject = path.resolve(projectDir);
+    const resolvedWorkspace = path.resolve(workspaceRoot);
+    if (
+      !resolvedProject.startsWith(resolvedWorkspace + path.sep) &&
+      resolvedProject !== resolvedWorkspace
+    ) {
+      throw new PioMcpError(
+        ERROR_CODES.PROJECT_OUTSIDE_WORKSPACE,
+        `Project path '${projectDir}' is outside the workspace root '${workspaceRoot}'.`,
+        { projectDir, workspaceRoot },
+      );
+    }
+  } else {
+    // Relaxed mode: just verify the path exists and has platformio.ini
+    const pioIniPath = path.join(projectDir, 'platformio.ini');
+    try {
+      if (!fs.existsSync(pioIniPath)) {
+        throw new PioMcpError(
+          ERROR_CODES.INVALID_PARAMS,
+          `No platformio.ini found at '${projectDir}'.`,
+          { projectDir },
+        );
+      }
+    } catch (err) {
+      if (err instanceof PioMcpError) throw err;
+      throw new PioMcpError(
+        ERROR_CODES.INVALID_PARAMS,
+        `Invalid project directory: ${err.message}`,
+        { projectDir },
+      );
+    }
   }
 }
 
