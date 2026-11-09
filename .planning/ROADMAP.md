@@ -40,7 +40,7 @@
 **Goal:** Package for npm, test with multiple AI hosts
 
 ### Plans
-1. **NPM package** - @pioarduino/mcp-server publish setup
+1. **NPM package** - `@zandev32/pioneer` publish setup (scoped lowercase; supersedes the `@pioarduino/mcp-server` placeholder)
 2. **Claude Desktop config** - Test MCP server configuration
 3. **Cursor integration** - Test with Cursor MCP setup
 4. **VS Code mcp.json** - Standalone mode for extension-less usage
