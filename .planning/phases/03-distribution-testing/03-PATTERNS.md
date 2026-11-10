@@ -37,11 +37,11 @@
 | `test/integration/test.test.js` | test | request-response | `src/tools/test.js` | role-match |
 | `test/integration/tasks.test.js` | test | request-response | `src/tasks.js` `registerTaskTools` | role-match |
 | `test/protocol/stdio-smoke.test.js` | test (protocol) | request-response | `test/uat-sesaiotnode.mjs` (`execAsync`) | flow-match |
-| `test/e2e/sesaiotnode.e2e.mjs` | test (e2e) | batch | `test/uat-sesaiotnode.mjs` | exact |
+| `test/e2e/sesaiotnode.e2e.mjs` | test (e2e) | batch | `test/uat-sesaiotnode.mjs` | exact | **Not created** — A7 keeps the script standalone (D-13); the opt-in e2e job in 03-06 invokes it directly |
 | `test/fixtures/host-configs/claude-desktop.json` | fixture | file-I/O | `README.md` JSON blocks | flow-match |
 | `test/fixtures/host-configs/cursor.json` | fixture | file-I/O | `README.md` JSON blocks | flow-match |
 | `test/fixtures/host-configs/vscode.json` | fixture | file-I/O | `README.md` JSON blocks | flow-match |
-| `test/fixtures/build-logs/` | fixture (directory) | file-I/O | none | none |
+| `test/fixtures/build-logs/` | fixture (directory) | file-I/O | none | none | **Not created** — D-10 mandates inline string fixtures for parsers |
 
 ## Pattern Assignments
 

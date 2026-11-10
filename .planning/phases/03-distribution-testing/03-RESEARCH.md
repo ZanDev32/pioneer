@@ -527,17 +527,17 @@ Under a plain `node dist/server.js` (and under most host spawns) `npm_package_ve
 
 ## Open Questions
 
-1. **Lowercase scope acceptance (blocks D-01).**
+1. **Lowercase scope acceptance (blocks D-01). → RESOLVED (D-01a)** — `@zandev32/pioneer` confirmed valid and free (the registry rejects capitals in new names). Gate: 03-01 task 1 `checkpoint:human-verify`.
    - What we know: npm rejects uppercase in new package names; `@zandev32/pioneer` is free.
    - What's unclear: whether the user already owns an npm org whose legacy name contains capitals (untestable without credentials).
    - Recommendation: one `checkpoint:human-verify` before the package.json rename task; default to `@zandev32/pioneer`.
 
-2. **Where the public repo lives (blocks `--provenance`).**
+2. **Where the public repo lives (blocks `--provenance`). → RESOLVED (D-03a)** — public `github.com/ZanDev32/pioneer`, `origin` added before the first tag. Gate: 03-07 task 1 `checkpoint:human-verify`.
    - What we know: no git remote; `repository.url` points at `pioarduino/pioarduino-vscode-ide`.
    - What's unclear: whether the user wants a fresh `ZanDev32/pioneer` repo or a fork target.
    - Recommendation: create `ZanDev32/pioneer` as public, `git remote add origin`, fix `repository.url` + add `bugs`/`homepage`.
 
-3. **Whether `test/uat-sesaiotnode.mjs` becomes a Vitest e2e file.**
+3. **Whether `test/uat-sesaiotnode.mjs` becomes a Vitest e2e file. → RESOLVED (A7, YAGNI)** — stays a standalone script; the opt-in e2e job in 03-06 is the only place it is referenced. Revisit only if a second consumer appears.
    - What we know: it hardcodes `/home/zandev32/Documents/klaklik/SesaIoTNode` and `KitchenGuard-V1` (`test/uat-sesaiotnode.mjs:15-16`), and Vitest's default `include` (`**/*.{test,spec}.?(c|m)[jt]s?(x)`) never matches it.
    - What's unclear: whether CI should ever run it.
    - Recommendation: leave it as a script; add `test/e2e/*.e2e.mjs` only if a second consumer appears (YAGNI).
@@ -583,7 +583,7 @@ Under a plain `node dist/server.js` (and under most host spawns) `npm_package_ve
 | D-05 (manual semver) | `npm version` drives bumps, CHANGELOG updated | manual | checklist item on the release PR | ❌ Wave 0 (`CHANGELOG.md`) |
 | D-06 (single RC) | `0.2.0-rc.1` published under `next`, not `latest` | manual/CI | `npm view … dist-tags` after RC publish | ❌ Wave 0 |
 | D-07 (Vitest) | Jest gone; `npm test` runs Vitest with no ESM flag | unit | `npm test` | ❌ Wave 0 (`package.json` edit) |
-| D-08 (fresh tests) | No `vscode` mocks anywhere in `test/` | unit | `grep -r "vscode" test/` must be empty | ❌ Wave 0 |
+| D-08 (fresh tests) | No `vscode` **module mocks** anywhere in `test/` (the host *name* — e.g. `test/fixtures/host-configs/vscode.json` — is not a mock) | unit | `grep -rE "from ['\"]vscode['\"]\|require\(['\"]vscode['\"]\)" test/` must be empty | ❌ Wave 0 |
 | D-09 (mock seam) | All 12 handlers tested via `vi.mock('../../src/utils.js')` | unit/integration | `npx vitest run --project integration` | ❌ Wave 0 |
 | D-10 (fixtures) | Inline strings for parsers; `test/fixtures/` only for integration | unit | `npx vitest run --project unit` | ❌ Wave 0 |
 | D-11 (priority) | parsers → errors → utils → tasks → handlers | unit | coverage report per file | ❌ Wave 0 |

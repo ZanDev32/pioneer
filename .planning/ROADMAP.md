@@ -44,24 +44,31 @@
 2. **Claude Desktop config** - Test MCP server configuration
 3. **Cursor integration** - Test with Cursor MCP setup
 4. **VS Code mcp.json** - Standalone mode for extension-less usage
-5. **Test suite** - Port 233 tests from extension repo, add standalone-specific tests
+5. **Test suite** - Fresh Vitest unit/integration/protocol suites against the standalone server (D-08: the extension's 233 VS Code-mock tests are not ported)
 6. **CI/CD** - GitHub Actions for build + test pipeline
 
-**Plans:** 5 plans
+**Plans:** 8 plans
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Package identity, dist-only tarball, version stamp, CHANGELOG, public origin
+- [ ] 03-01-PLAN.md — Package identity, build-time version stamp, dist-only tarball asserted by a unit test
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-02-PLAN.md — Vitest harness, pinned install gate, pure-function unit layer
+- [ ] 03-02-PLAN.md — v1 SDK pin + `registerTool` migration, release metadata (CHANGELOG, LICENSE, repository, prepublish build)
+- [ ] 03-03-PLAN.md — Unit layer over parsers, errors, metadata, CLI executor, TaskManager
+- [ ] 03-05-PLAN.md — Host config templates, README install matrix, scoped package name in SKILL.md
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-03-PLAN.md — Collapse the async executor bypasses, integration suite for all 12 tools
-- [ ] 03-04-PLAN.md — Canonical host-config fixtures/validator, README matrix, smoke checklist
+- [ ] 03-04-PLAN.md — Collapse async executor bypasses onto the shared seam; integration layer over all 12 handlers
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-05-PLAN.md — Protocol lane, CI matrix, opt-in e2e job, tag-only provenance publish
+- [ ] 03-06-PLAN.md — Protocol lane, 3x3 CI matrix with push/PR triggers, pinned Inspector job, opt-in e2e
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 03-07-PLAN.md — Public repo + origin, tag-triggered provenance publish, tag-version guard
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 03-08-PLAN.md — `0.2.0-rc.1` cut on `next`, `docs/host-smoke-test.md`, blocking host validation, `0.2.0` release
 
 ## Phase 4: Competitive Features
 **Goal:** Match and exceed jl-codes/platformio-mcp feature set
