@@ -200,3 +200,14 @@ None raised during this discussion. All user suggestions were within phase scope
 
 **User's choice:** npx first, plus global + source.
 **Notes:** User raised this as free text during the finalize checkpoint: "add option to be install using npx". Recorded as D-27.
+
+## MCP SDK generation (v1 vs v2)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Stay on v1 for 0.2.0, pin + assert | `^1.32.2`, rename `server.tool()` → `registerTool()`, protocol lane asserts `2025-11-25`; v2 gets its own phase | ✓ |
+| Migrate to v2 before 0.2.0 | `@modelcontextprotocol/server@2.4.0`, rewrite registration + stdio import, assert `2026-07-28` | |
+| Insert a dedicated v2 migration phase first | keep Phase 3 v1-only, publish after the migration phase | |
+
+**User's choice:** Stay on v1 for 0.2.0, pin + assert.
+**Notes:** Raised as a factual question — "does this project already use the latest MCP standard?" Verified answer: no, one generation behind. Installed `@modelcontextprotocol/sdk@1.29.0` and even the newest 1.x (`1.32.2`) cap at `LATEST_PROTOCOL_VERSION = '2025-11-25'`; a live probe where the client offered `2026-07-28` was answered `2025-11-25`. The `2026-07-28` spec is served by the renamed v2 package `@modelcontextprotocol/server@2.4.0` (GA 2026-07-27), whose stateless core targets remote/HTTP hosting while v2 keeps 1.x client interop.

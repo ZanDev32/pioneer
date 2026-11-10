@@ -1,7 +1,7 @@
 # Phase 3: Distribution & Testing - Context
 
 **Gathered:** 2026-06-24
-**Updated:** 2026-11-09 — added D-21..D-27 (verification depth, release flow, install paths) after the first plan set was verified
+**Updated:** 2026-11-09 — added D-21..D-29 (verification depth, release flow, install paths, MCP SDK generation) after the first plan set was verified
 **Status:** Ready for planning
 
 <domain>
@@ -46,6 +46,10 @@ This phase delivers **distribution readiness and quality assurance** — not new
 - **D-18:** **MCP Inspector CLI** in CI for automated JSON-RPC protocol compliance — validates `tools/list` and `tools/call` for all 12 tools, works with stdio transport. Official MCP project (10.2k ★).
 - **D-19:** **Config file template validation** — automated JSON validation of all 3 host config templates (Claude Desktop, Cursor, VS Code) to catch key name drift (`mcpServers` vs `servers`, `type` field presence differences).
 - **D-20:** **Manual smoke test checklists** gated to milestone releases (v0.2.0, v1.0.0) for host-specific validation no automation can cover: config file placement, variable resolution (`PIO_WORKSPACE_ROOT`), startup behavior per host.
+
+### MCP SDK Generation (discussed 2026-11-09)
+- **D-28:** 0.2.0 ships on the **v1 SDK line**: pin `@modelcontextprotocol/sdk` to `^1.32.2` (verified: 1.29.0 locked today, 1.32.2 is the newest 1.x, and every 1.x caps at `LATEST_PROTOCOL_VERSION = '2025-11-25'`), rename the 12 `server.tool(...)` registrations to `server.registerTool(...)` (all `tool()` overloads are `@deprecated` in the installed SDK), and make the protocol lane assert the negotiated `protocolVersion === '2025-11-25'` rather than accepting whatever the server returns. — **Reversibility:** costly — the pin is cheap, but undoing the `registerTool` rename plus a later major-version move touches all 12 tool modules and the protocol lane.
+- **D-29:** Do **not** adopt `@modelcontextprotocol/server@2.x` (the `2026-07-28` stateless spec, package renamed and GA 2026-07-27) in Phase 3. Deferred to its own phase because the stateless core's value is remote/HTTP hosting (Workers, Durable Objects) while `pioneer` is a local stdio server, and v2 keeps 1.x client interop so 0.2.0 loses no host compatibility. Trigger to schedule it: before 1.0.0, or as soon as a target host requires a 2026-07-28 feature. — **Reversibility:** one-way for the published contract — once 0.2.0 advertises 2025-11-25, adding a 2026-07-28 protocol means a new release with its own attestation, and the version number cannot be republished.
 
 ### Verification Depth & Release Flow (discussed 2026-11-09)
 - **D-21:** CI OS lane depth — `ubuntu-latest` runs the full suite; `windows-latest` and `macos-latest` run `npm run test:unit` only. Matches D-14's stated intent and stops a POSIX-only regression from turning an OS red that can never support the monitor tool. — **Reversibility:** reversible — one matrix cell plus one script in `ci.yml`.
