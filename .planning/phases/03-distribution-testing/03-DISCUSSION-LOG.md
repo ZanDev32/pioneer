@@ -129,3 +129,74 @@ The following were left to the agent's discretion (documented in CONTEXT.md):
 ## Deferred Ideas
 
 None raised during this discussion. All user suggestions were within phase scope boundaries.
+
+---
+
+# Re-discussion 2026-11-09 — verification depth, release flow, install paths
+
+> Triggered after the first plan set (5 plans) passed verification. The five areas below are
+> things those plans asserted but the original discussion never decided. Decisions landed as
+> D-21..D-27 in `03-CONTEXT.md`.
+
+## Windows/macOS lane depth
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Unit-only on Windows/macOS | windows/macos run `npm run test:unit`; ubuntu runs full `npm test` | ✓ |
+| Full suite on all three OS | every OS runs `npm test` | |
+| Ubuntu-only | drop cross-OS build proof | |
+
+**User's choice:** Unit-only on Windows/macOS.
+**Notes:** D-14 already said "build + unit tests" on all OS while plan 03-05 ran bare `npm test` on all three — the conflict is now resolved in favour of D-14.
+
+## POSIX-only serial monitor on Windows
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Assert a clear platform error | explicit `PioMcpError` on win32 + unit test | ✓ |
+| Leave the raw spawn error | no guard, Windows user sees `ENOENT` | |
+
+**User's choice:** Assert a clear platform error.
+
+## Coverage policy
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Floor 70/60/70/70 | lighter global floor | |
+| Floor 80/70/80/80 | statements/branches/functions/lines, enforced in CI | ✓ |
+| Report-only | artifact, never fails | |
+
+**User's choice:** Floor 80/70/80/80.
+**Notes:** The floor was deliberately raised above the recommendation because Phase 3 writes the whole suite in one pass; per-file floor of 85% lines on `src/parsers.js` also selected (over a global-only rule).
+
+## Default `npm test` composition
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Exclude protocol from `npm test` | `npm test` = unit + integration; `test:protocol` separate | ✓ |
+| Include protocol | one command proves everything, +build +12 stdio calls | |
+| Unit-only default | split the rest into named scripts | |
+
+**User's choice:** Exclude protocol from `npm test`.
+**Notes:** Coverage measured from unit + integration only (over "all projects merged") because protocol tests exercise the bundle, not source.
+
+## RC → `latest` promotion
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Republish 0.2.0 through the pipeline | fresh build + own attestation; RC stays under `next` | ✓ |
+| Move `latest` with dist-tag add | no rebuild, `latest` would point at `-rc.1` | |
+
+**User's choice:** Republish through the pipeline.
+**Notes:** Publish trigger is a pushed `v*` tag only (no `workflow_dispatch` publishing path). Dist-tag is derived from semver — `-` in the version → `--tag next`, otherwise `latest`.
+
+## Install paths (user-raised, free text)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| npx first, plus global + source | three documented paths; host fixtures use `npx -y`; unit test asserts README | ✓ |
+| npx only | shortest docs, `bin: pioneer` undocumented | |
+| Three paths + post-publish npx smoke job | adds a dispatch-only CI job proving the tarball launches | |
+
+**User's choice:** npx first, plus global + source.
+**Notes:** User raised this as free text during the finalize checkpoint: "add option to be install using npx". Recorded as D-27.

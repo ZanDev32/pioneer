@@ -1,6 +1,7 @@
 # Phase 3: Distribution & Testing - Context
 
 **Gathered:** 2026-06-24
+**Updated:** 2026-11-09 — added D-21..D-27 (verification depth, release flow, install paths) after the first plan set was verified
 **Status:** Ready for planning
 
 <domain>
@@ -45,6 +46,15 @@ This phase delivers **distribution readiness and quality assurance** — not new
 - **D-18:** **MCP Inspector CLI** in CI for automated JSON-RPC protocol compliance — validates `tools/list` and `tools/call` for all 12 tools, works with stdio transport. Official MCP project (10.2k ★).
 - **D-19:** **Config file template validation** — automated JSON validation of all 3 host config templates (Claude Desktop, Cursor, VS Code) to catch key name drift (`mcpServers` vs `servers`, `type` field presence differences).
 - **D-20:** **Manual smoke test checklists** gated to milestone releases (v0.2.0, v1.0.0) for host-specific validation no automation can cover: config file placement, variable resolution (`PIO_WORKSPACE_ROOT`), startup behavior per host.
+
+### Verification Depth & Release Flow (discussed 2026-11-09)
+- **D-21:** CI OS lane depth — `ubuntu-latest` runs the full suite; `windows-latest` and `macos-latest` run `npm run test:unit` only. Matches D-14's stated intent and stops a POSIX-only regression from turning an OS red that can never support the monitor tool. — **Reversibility:** reversible — one matrix cell plus one script in `ci.yml`.
+- **D-22:** POSIX-only serial monitor gets an explicit platform guard: on `win32`, `pio_serial_start` rejects with a `PioMcpError` naming the platform constraint and the supported alternative, and a unit test asserts that error. Windows users see a real message instead of a raw spawn `ENOENT`.
+- **D-23:** CI enforces a coverage floor of **80 statements / 70 branches / 80 functions / 80 lines** (global, `src/`). Raised from 70/60/70/70 on purpose: the phase writes the whole test suite, so the floor is set once and is priced into the plan. — **Reversibility:** reversible — a `thresholds` object in `vitest.config.js`.
+- **D-24:** Additional per-file floor: `src/parsers.js` ≥ **85% lines**. It is the regex-heavy module where a silent regression yields wrong diagnostics rather than a crash; a globally well-covered `errors.js` must not mask it.
+- **D-25:** `npm test` = `vitest run` over **unit + integration only** (no build step). The protocol lane is `npm run test:protocol` (build + stdio `tools/list`/`tools/call`), invoked by CI and by its own plan's verify. Coverage is measured from unit + integration only; protocol tests exercise the bundle, not source, and would double-count.
+- **D-26:** Release flow — `latest` is set by publishing a fresh **`0.2.0`** through the same pipeline (new build, own provenance attestation), never by moving a dist-tag onto `0.2.0-rc.1`. Publish triggers on a pushed `v*` tag only (`workflow_dispatch` is not a publishing path). The dist-tag is derived from semver: versions containing `-` publish with `--tag next`, plain versions publish as `latest`, so a typo cannot push a prerelease to `latest`. — **Reversibility:** one-way — a published version number and its `latest` pointer are externally visible and cannot be unpublished without breaking consumer installs.
+- **D-27:** Install paths documented and verified, `npx` first: (1) `npx @zandev32/pioneer` — zero-install; (2) `npm i -g @zandev32/pioneer` then `pioneer`; (3) clone + `npm ci && npm run build` for contributors. Host config fixtures use `command: "npx"` with `args: ["-y", "@zandev32/pioneer"]`, and a unit test asserts the README documents all three paths and that the fixtures carry that same arg shape.
 
 ### the agent's Discretion
 - Exact Vitest config file structure (`vitest.config.js` vs `vitest.workspace.js`)
@@ -131,7 +141,7 @@ This phase delivers **distribution readiness and quality assurance** — not new
 ## Specific References
 
 ### User's npm Org
-- Package scoped to `@ZanDev32` — the user's personal npm organization. All `npx` and install commands use `@ZanDev32/pioneer`.
+- Package scoped to `@zandev32` — the user's personal npm organization (lowercase required for new packages; see D-01a). All `npx` and install commands use `@zandev32/pioneer`.
 
 ### Reference Project for E2E Tests
 - `/home/zandev32/Documents/klaklik/SesaIoTNode` — Real PlatformIO project with `KitchenGuard-V1` environment. Used by existing UAT script. Suitable for tagged `#e2e` integration tests.
