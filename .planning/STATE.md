@@ -32,7 +32,7 @@ Phase 2: Tool Expansion ✅ COMPLETED
 - **Phase 0:** ✅ COMPLETE — Server builds, starts, registers 3 tools
 - **Phase 1:** ✅ COMPLETE — SKILL.md (231 lines) + 6 shell wrappers created
 - **Phase 2:** ✅ COMPLETE — 11 new MCP tools + async support, SKILL.md updated to 12 tools
-- **Phase 3:** ✅ PLANNED — 5 plans, 4 waves, research + validation complete; ready to execute
+- **Phase 3:** ✅ PLANNED — 8 plans, 6 waves, plan-checker verification passed; ready to execute
 - **Phase 4:** NOT STARTED — Competitive features
 
 ## Active Workstreams
@@ -41,6 +41,7 @@ None
 
 ## Recent Activity
 
+- 2026-11-09: Phase 3 replanned from scratch (user decision) — 8 plans / 6 waves; plan-checker ran 3 iterations + 1 targeted retry, ended PASSED; decision-coverage 29/29; ROADMAP waves re-annotated; RESEARCH/PATTERNS/VALIDATION/COVERAGE reconciled
 - 2026-06-22: Phase 2 executed — 11 new MCP tools added (TaskManager, device/board discovery, serial monitor, static analysis, test runner, async build/upload), SKILL.md updated with all 12 tools
 - 2026-06-22: Phase 2 planned — RESEARCH.md + 2 plans (PLAN-A: foundation/discovery, PLAN-B: check/test), verification passed
 - 2026-06-22: Phase 2 context gathered — 4 gray areas discussed via advisor mode, 9 decisions captured (D-01 to D-09): device discovery (pio device list --json-output), layered background tasks (polling + MCP logging), 3-tool serial monitor, user-selectable static analysis with --json-output
