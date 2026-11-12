@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "pioneer": {
+      "command": "npx",
+      "args": ["-y", "@zandev32/pioneer", "--workspace", "/absolute/path/to/project"],
+      "env": {
+        "PIO_WORKSPACE_ROOT": "/absolute/path/to/project"
+      }
+    }
+  }
+}

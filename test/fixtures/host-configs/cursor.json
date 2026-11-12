@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pioneer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@zandev32/pioneer", "--workspace", "${workspaceFolder}"]
+    }
+  }
+}

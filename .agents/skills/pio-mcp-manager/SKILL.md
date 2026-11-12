@@ -54,7 +54,7 @@ If MCP tools are not available, follow this pattern:
 
 1. **Detect:** Check if `pioneer` is installed and accessible
 2. **Ask:** "Would you like me to install the MCP server for better build diagnostics and safety?"
-3. **Install (if user agrees):** Run `npx pioneer` or `npm install -g pioneer`
+3. **Install (if user agrees):** Run `npx -y @zandev32/pioneer` or `npm i -g @zandev32/pioneer`
 4. **Fallback:** If the user explicitly declines, proceed to Tier 3
 
 **Important:** Do NOT auto-install on every invocation. Only install when detection fails AND the user confirms.

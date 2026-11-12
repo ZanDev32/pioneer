@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "pioneer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@zandev32/pioneer", "--workspace", "${workspaceFolder}"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PIO_WORKSPACE_ROOT": "${workspaceFolder}"
+      }
+    }
+  }
+}

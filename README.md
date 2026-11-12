@@ -4,9 +4,40 @@ Standalone MCP (Model Context Protocol) server for PlatformIO/pioarduino project
 
 ## Installation
 
+Requires Node.js >= 22.12.0 and PlatformIO Core (`pio`) on `PATH`. Three install paths, least commitment first — all of them run the same `@zandev32/pioneer` package.
+
+### Zero-Install
+
+Run straight from the npm registry without adding anything globally:
+
 ```bash
-npm install
+npx @zandev32/pioneer --workspace /path/to/pio/project
 ```
+
+Add `-y` in host configs and scripts so npm never stops to ask `Ok to proceed? (y)`:
+
+```bash
+npx -y @zandev32/pioneer --workspace /path/to/pio/project
+```
+
+### Global Install
+
+```bash
+npm i -g @zandev32/pioneer
+pioneer --workspace /path/to/pio/project
+```
+
+### Clone and Build (Contributors)
+
+From a clone of this repository:
+
+```bash
+npm ci
+npm run build
+node dist/server.js --workspace /path/to/pio/project
+```
+
+Release history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Usage
 
@@ -32,9 +63,75 @@ PORT=3000 pioneer
 pioneer --port 3000 --workspace /path/to/pio/project
 ```
 
+## Host Configuration
+
+Every block below launches `npx -y @zandev32/pioneer` over stdio. Replace `/absolute/path/to/project` with the absolute path to your PlatformIO project.
+
+### Claude Desktop
+
+Config file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "pioneer": {
+      "command": "npx",
+      "args": ["-y", "@zandev32/pioneer", "--workspace", "/absolute/path/to/project"],
+      "env": {
+        "PIO_WORKSPACE_ROOT": "/absolute/path/to/project"
+      }
+    }
+  }
+}
+```
+
+Claude Desktop rejects an unknown `type` field, so it is omitted.
+
+### Cursor
+
+Config file: `~/.cursor/mcp.json` for all projects, or `.cursor/mcp.json` inside one project.
+
+```json
+{
+  "mcpServers": {
+    "pioneer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@zandev32/pioneer", "--workspace", "${workspaceFolder}"]
+    }
+  }
+}
+```
+
+### VS Code
+
+Config file: `.vscode/mcp.json` in the workspace, or the `mcp.json` of your VS Code profile.
+
+```json
+{
+  "servers": {
+    "pioneer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@zandev32/pioneer", "--workspace", "${workspaceFolder}"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PIO_WORKSPACE_ROOT": "${workspaceFolder}"
+      }
+    }
+  }
+}
+```
+
+VS Code does not advertise MCP roots, so the workspace has to come from `--workspace` or `PIO_WORKSPACE_ROOT` — both are set above.
+
 ## Adding to VS Code as a Remote MCP
 
-### Option 1: HTTP Mode (Recommended for Remote)
+### HTTP Mode (Recommended for Remote)
 
 1. **Start the MCP server** on a port:
    ```bash
@@ -55,45 +152,7 @@ pioneer --port 3000 --workspace /path/to/pio/project
 
 3. **Restart VS Code** — the Pioneer tools will appear in the Copilot chat.
 
-### Option 2: Stdio Mode (Local Projects)
-
-For projects in your current workspace, use stdio mode in `.vscode/mcp.json`:
-```json
-{
-  "servers": {
-    "pioneer": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "/absolute/path/to/pioneer/dist/server.js",
-        "--workspace",
-        "${workspaceFolder}"
-      ]
-    }
-  }
-}
-```
-
-> **Note**: `command` must be an absolute path or a globally installed binary. Using `node dist/server.js` with a relative path won't work — resolve it to the full path.
-
-### Option 3: Global Install
-
-```bash
-cd /path/to/pioneer && npm install -g .
-```
-
-Then reference it in `.vscode/mcp.json`:
-```json
-{
-  "servers": {
-    "pioneer": {
-      "type": "stdio",
-      "command": "pioneer",
-      "args": ["--workspace", "${workspaceFolder}"]
-    }
-  }
-}
-```
+For local (stdio) projects see [VS Code](#vs-code) under Host Configuration.
 
 ### Environment Variables
 
