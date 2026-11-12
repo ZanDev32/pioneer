@@ -3,7 +3,7 @@ status: testing
 phase: 03-Distribution & Testing
 source: [03-VERIFICATION.md]
 started: 2026-11-12T07:48:00Z
-updated: 2026-11-13T01:12:00Z
+updated: 2026-11-13T01:35:00Z
 order: dependency-ordered (publish -> host validation -> release cut -> hardening), reordered by user request
 ---
 
@@ -26,16 +26,27 @@ expected: `npm view @zandev32/pioneer dist-tags --json` → `next` only, no `lat
 prerequisite: the `NPM_TOKEN` repository secret (granular token with bypass-2FA) — now present and working.
 result: fail
 observed: |
-  Published twice and both became visible after npm's first-publish processing window:
-  v0.2.0-rc.1 (run 43264560055) then v0.2.0-rc.2 (run 43265188947), provenance logged each time.
-  `npx -y @zandev32/pioneer@next --help` -> "Pioneer v0.2.0-rc.2"; published `bin` is
-  {"pioneer":"dist/server.js"} (rc.1 was broken: npm stripped the `./`-prefixed bin).
+  Three RC publishes succeeded: 0.2.0-rc.1 (run 43264560055), 0.2.0-rc.2 (43265188947),
+  0.2.0-rc.3 (43267265226). Each logged `+ @zandev32/pioneer@0.2.0-rc.X` plus a provenance
+  attestation; the registry became readable only after npm's first-publish processing window
+  (~5-10 min), which is why early `npm view` calls 404'd.
+  WORKS: `npx -y @zandev32/pioneer@next --help` -> "Pioneer v0.2.0-rc.3";
+  `npx -y @zandev32/pioneer@0.2.0-rc.1 --help` -> "Pioneer v0.2.0-rc.1" (bin present in the
+  published package; the local `bin[pioneer] ... removed` warning was npm normalizing `./`, not
+  a broken artifact). rc.2 fixed `bin` and `repository.url` to npm's normalized forms.
   FAILING CRITERION: `npm view @zandev32/pioneer dist-tags --json` ->
-  {"latest":"0.2.0-rc.1","next":"0.2.0-rc.2"}. npm stamps `latest` on a brand-new package even
-  when publishing with `--tag next`, so a prerelease became the default install target and the
+  {"latest":"0.2.0-rc.1","next":"0.2.0-rc.3"}. npm stamps `latest` on a brand-new package even
+  when publishing with `--tag next`, so a prerelease is the default install target and the
   D-06/D-20/D-26 gate ("`latest` has not moved") is violated.
-cause: npm first-publish default, not a workflow bug — but the publish job had no guard against it.
-why_human: requires the npm account owner to create the secret; also the only way to exercise the never-run publish job (it is skipped on every non-tag run).
+cause: |
+  1. npm first-publish default (not a workflow bug) - now guarded: the publish job removes
+     `latest` when it points at a prerelease (commit 67b65ff).
+  2. The guard cannot execute the cleanup: NODE_AUTH_TOKEN can publish but
+     `DELETE /-/package/@zandev32%2fpioneer/dist-tags/latest` returns 403, so the step now warns
+     instead of failing the release (commit 6d00932). Removing the tag needs npm-side authority
+     (a token allowed to manage dist-tags, or an interactive OTP).
+resolution_path: `npm dist-tag rm @zandev32/pioneer latest` with sufficient authority; it also
+  self-heals when 0.2.0 publishes (a plain version sets `latest` correctly).
 
 ### 2. Three-host RC validation — Claude Desktop, Cursor, VS Code
 expected: `docs/host-smoke-test.md` sign-off table all three rows PASS — config placed where each host reads it, `${workspaceFolder}` / `PIO_WORKSPACE_ROOT` resolve, server starts and `tools/list` returns 12 tools, a build completes; Windows `pio_serial_start` returns PLATFORM_UNSUPPORTED (-32010).
