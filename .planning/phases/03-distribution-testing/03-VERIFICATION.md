@@ -1,6 +1,6 @@
 ---
 phase: 03-distribution-testing
-verified: 2026-11-12T07:42:45Z
+verified: 2026-11-12T07:57:23Z
 status: human_needed
 score: 30/32 must-haves verified
 covered_files:
@@ -62,15 +62,14 @@ covered_files:
   - test/unit/tasks.test.js
   - test/unit/utils.test.js
   - vitest.config.js
-covered_digest: "v4:sha256:aeb6dadd482916094d756a0a0bb7a9fc5f682a5371163620b7a0688e23f5b42e"
+covered_digest: "v4:sha256:4275eca0a8d5ac12a24cbed3549bbadbe963307d517e14becb19333a8ec64348"
 behavior_unverified: 1
 overrides_applied: 0
 re_verification:
   previous_status: human_needed
-  previous_score: 29/32
+  previous_score: 30/32
   gaps_closed:
-    - "#25 publish job: `if:` now requires `github.event_name == 'push'`"
-    - "Windows `npm pack` spawn (`shell: true` on win32) — hosted matrix green on 77fb258"
+    - "Packed-tarball unit case exceeded the 2000 ms per-dir budget on `windows-latest, node 22` (run 43177621384: `Error: Test timed out in 2000ms`) — `3192753` adds a per-test `15_000` ms budget; run 43177908787 is green"
   gaps_remaining: []
   regressions: []
 behavior_unverified_items:
@@ -94,9 +93,9 @@ human_verification:
 
 **Phase Goal (ROADMAP):** Package for npm, test with multiple AI hosts — `@zandev32/pioneer` publish setup, Claude Desktop / Cursor / VS Code config, fresh Vitest suites, GitHub Actions CI/CD.
 
-**Verified:** 2026-11-12T07:42:45Z (HEAD `5a8d8d7`, branch `master`, `origin/master` at the same commit)
+**Verified:** 2026-11-12T07:57:23Z (HEAD `3192753`, branch `master`, `origin/master` at the same commit)
 **Status:** `human_needed`
-**Re-verification:** Yes — refresh after `77fb258` (Windows shell spawn) and `5a8d8d7` (publish `if:` event guard); previous report scored 29/32
+**Re-verification:** Yes — refresh after `3192753` (per-test 15 s budget for the Windows `npm pack` case, fixing run `43177621384`); previous report scored 30/32
 
 ## Goal Achievement
 
@@ -109,10 +108,10 @@ Roadmap Phase 3 has no separate success-criteria list; must-haves below are the 
 | # | Must-have | Status | Proof |
 |---|-----------|--------|-------|
 | 1 | Package identity: `@zandev32/pioneer`, bin `pioneer` → `./dist/server.js`, `files: ["dist/"]` | ✓ VERIFIED | `package.json`; `test/unit/package.test.js:23-27`; E1 |
-| 2 | `npm pack` ships only `dist/` + package metadata | ✓ VERIFIED | E8 — 4 files: LICENSE, README.md, dist/server.js, package.json |
+| 2 | `npm pack` ships only `dist/` + package metadata | ✓ VERIFIED | E8 — 4 files: LICENSE, README.md, dist/server.js, package.json; packed-tarball unit case green locally in 312 ms and on hosted `windows-latest, node 22` (run `43177908787`) — E23 |
 | 3 | Built bundle reports `package.json` version in `--help` and in MCP `initialize` | ✓ VERIFIED | E4 (`Pioneer v0.2.0-rc.1`), E9 (`serverInfo.version`), `src/server.js:48,89` fed by `build.mjs` `define` |
 | 4 | `test/unit/package.test.js` asserts the bundle is under the 5 MB ceiling | ✓ VERIFIED | 862,653 B; test ran (not skipped) — E3 |
-| 5 | `npm test` runs Vitest over unit+integration, no `--experimental-vm-modules`; per-dir timeouts 2000/30000 | ✓ VERIFIED | E5; `package.json:scripts`; `vitest.config.js` unit `testTimeout: 2000`, integration `30000` |
+| 5 | `npm test` runs Vitest over unit+integration, no `--experimental-vm-modules`; per-dir timeouts 2000/30000 | ✓ VERIFIED | E5; `package.json:scripts`; `vitest.config.js` unit `testTimeout: 2000`, integration `30000`; the Windows-spawn pack case carries a per-test `15_000` override (`test/unit/package.test.js:54`) |
 | 6 | All 12 tools use `registerTool` with explicit `{description, inputSchema}`; SDK `^1.32.2`; no deprecation warnings | ✓ VERIFIED | E10 (12 `registerTool`, 0 `server.tool(`), E2 (resolved 1.32.2), E9 stderr clean |
 | 7 | Release metadata: `repository.url`, `publishConfig.access`, `prepublishOnly` build, Keep-a-Changelog CHANGELOG, Apache-2.0 LICENSE | ✓ VERIFIED | `package.json`; `CHANGELOG.md`; `LICENSE` (`Apache License` ×4); E12 |
 | 8 | Unit layer over the five pure modules with inline string fixtures; no unit test spawns real `pio` | ✓ VERIFIED | E5 (16 files); `test/unit/utils.test.js:4` mocks `child_process`; `test/fixtures/` holds only host configs |
@@ -145,7 +144,7 @@ Roadmap Phase 3 has no separate success-criteria list; must-haves below are the 
 
 ## Evidence
 
-Environment: Node `v26.13.0`, npm `12.2.2`, Python `3.14.9`, Linux x64. E1–E15 and E17–E20 were captured at `77fb258`; E16 and E21–E22 were re-run at `5a8d8d7` (HEAD).
+Environment: Node `v26.13.0`, npm `12.2.2`, Python `3.14.9`, Linux x64. E1–E15 and E17–E20 were captured at `77fb258`; E16 and E21–E22 were re-run at `5a8d8d7`; E23 re-runs the pack path and the suite at `3192753` (HEAD).
 
 ### E1 — `npm ci`
 ```
@@ -306,15 +305,17 @@ JOB publish: if=github.event_name == 'push' && startsWith(github.ref, 'refs/tags
 ```
 `grep -c "continue-on-error"` → 0; `grep -c "npm publish"` → 1.
 
-### E17 — the hosted matrix actually ran and is green on the matrix commit (GitHub Actions API)
+### E17 — the hosted matrix actually ran and is green at HEAD (GitHub Actions API)
 ```
-runs: 43175561402 77fb258 push completed success  2026-11-12T07:28:52Z master
+runs: 43177908787 3192753 push completed success  2026-11-12T07:47:51Z master   (HEAD)
+      43177621384 ef060f2 push completed failure
+      43175561402 77fb258 push completed success  2026-11-12T07:28:52Z master
       43175362904 d2cb481 push completed failure
       43175248884 ffbeb76 push completed failure
       43174815733 a0f770d push completed failure
       43174600553 0ab058d push completed failure
 
-jobs of 43175561402 (HEAD):
+jobs of 43177908787 (HEAD):
 success   protocol (inspector)
 success   test (macos-latest, node 24)      success   test (macos-latest, node 22)
 success   test (windows-latest, node 24)    success   test (windows-latest, node 22)
@@ -322,7 +323,7 @@ success   test (ubuntu-latest, node 22)     success   test (ubuntu-latest, node 
 skipped   e2e (manual)
 skipped   publish (npm provenance)
 ```
-The pre-fix run failed **only** on `test (windows-latest, node 22)` and `test (windows-latest, node 24)` — the matrix genuinely exercises Windows and caught the two defects fixed by `a0f770d`/`d2cb481`/`77fb258`. `5a8d8d7` changes only the publish `if:` and this report, so the matrix result carries over unchanged; `publish` skipped on a non-tag push confirms the tag gate at runtime.
+The pre-fix run failed **only** on `test (windows-latest, node 22)` and `test (windows-latest, node 24)` — the matrix genuinely exercises Windows and caught the two defects fixed by `a0f770d`/`d2cb481`/`77fb258`. Run `43177621384` (`ef060f2`) failed only `test (windows-latest, node 22)` on the `Unit suite` step: `test/unit/package.test.js` `Error: Test timed out in 2000ms` at line 42. `3192753` adds a `15_000` ms per-test budget to that case; run `43177908787` (`3192753`) is green on all 6 matrix cells + protocol, with `publish` skipped on a non-tag push confirming the tag gate at runtime.
 
 ### E18 — the pinned Inspector commands work (executed locally, same argv as CI)
 ```
@@ -385,6 +386,32 @@ npm publish       = 1 occurrence (line 167: --provenance --access public ${{ ste
 continue-on-error = 0 occurrences
 permissions       = top-level contents: read (lines 11-12); publish job contents: read + id-token: write (lines 131-133)
 ```
+
+### E23 — re-verification at HEAD `3192753` (2026-11-12)
+
+`3192753` changes only `test/unit/package.test.js`: the `packed tarball > ships only dist/ plus package metadata` case now passes a per-test `15_000` ms budget (`}, 15_000);`, line 54), because the pre-fix hosted run exceeded the unit project's 2000 ms `testTimeout` on Windows (`Error: Test timed out in 2000ms`, run `43177621384`, `windows-latest, node 22`). Locally the case completes in `312ms` — comfortably inside the original 2000 ms budget and ~48× inside the new override.
+
+```
+$ npm ci
+added 231 packages in 1s
+$ npm run build
+Built dist/server.js successfully        # 862,653 B
+$ npm test
+ Test Files  16 passed (16)
+      Tests  142 passed (142)
+   Duration  703ms
+
+$ npx vitest run test/unit/package.test.js --project unit --reporter=verbose
+ ✓ |unit| test/unit/package.test.js > package identity > declares the scoped name, bin target, and dist-only allowlist 2ms
+ ✓ |unit| test/unit/package.test.js > package identity > no script uses the Jest vm-modules flag 0ms
+ ✓ |unit| test/unit/package.test.js > packed tarball > ships only dist/ plus package metadata 312ms
+ ✓ |unit| test/unit/package.test.js > built bundle > is a single file under the 5 MB ceiling 0ms
+ ✓ |unit| test/unit/package.test.js > built bundle > reports the package.json version in the help banner 84ms
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Duration  502ms
+```
+Hosted confirmation: run `43177908787` (`3192753`) — `test (windows-latest, node 22)` success, along with the other 5 matrix cells and `protocol (inspector)`; `e2e` and `publish` skipped as designed (E17).
 
 ## Key Links / Data-Flow
 
@@ -462,5 +489,5 @@ Deferred items: none — no later milestone phase claims the publish or host-val
 
 ---
 
-_Verified: 2026-11-12T07:42:45Z_
+_Verified: 2026-11-12T07:57:23Z_
 _Verifier: GSD verifier (Phase3VerifierRefresh, omp)_
