@@ -306,15 +306,17 @@ export function registerDiscoverTools(server, ctx) {
   // -------------------------------------------------------------------------
   // pio_list_devices
   // -------------------------------------------------------------------------
-  server.tool(
+  server.registerTool(
     'pio_list_devices',
-    'List connected serial, logical, or mDNS devices detected by PlatformIO. Use this to discover which port to use for pio_upload or pio_serial_start.',
     {
-      filter: z
-        .enum(['serial', 'logical', 'mdns'])
-        .optional()
-        .default('serial')
-        .describe('Device type to list. Default: serial (connected UART/USB ports).'),
+      description: 'List connected serial, logical, or mDNS devices detected by PlatformIO. Use this to discover which port to use for pio_upload or pio_serial_start.',
+      inputSchema: {
+        filter: z
+          .enum(['serial', 'logical', 'mdns'])
+          .optional()
+          .default('serial')
+          .describe('Device type to list. Default: serial (connected UART/USB ports).'),
+      },
     },
     async (params) => {
       try {
@@ -386,16 +388,17 @@ export function registerDiscoverTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 
   // -------------------------------------------------------------------------
   // pio_list_boards
   // -------------------------------------------------------------------------
-  server.tool(
+  server.registerTool(
     'pio_list_boards',
-    'List all build environments defined in platformio.ini with their board, platform, and framework assignments. Use this to discover which environments exist in the project before building.',
-    {},
+    {
+      description: 'List all build environments defined in platformio.ini with their board, platform, and framework assignments. Use this to discover which environments exist in the project before building.',
+      inputSchema: {},
+    },
     async (params) => {
       try {
         const projectDir = (await resolveWorkspace(ctx)).value;
@@ -435,6 +438,5 @@ export function registerDiscoverTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }

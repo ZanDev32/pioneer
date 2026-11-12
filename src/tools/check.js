@@ -86,27 +86,29 @@ function summarizeCheckResults(results) {
  * @param {{ workspaceRoot: string }} ctx
  */
 export function registerCheckTools(server, ctx) {
-  server.tool(
+  server.registerTool(
     'pio_check',
-    'Run static code analysis on a PlatformIO project. Supports cppcheck, clangtidy, and pvs-studio. Returns structured defect results (severity, message, file, line). Use to catch bugs and style issues before build.',
     {
-      environment: z
-        .string()
-        .optional()
-        .describe('Environment to check. Checks all environments if omitted.'),
-      tool: z
-        .enum(['cppcheck', 'clangtidy', 'pvs-studio'])
-        .optional()
-        .describe('Analysis tool to use. Defaults to the check_tool configured in platformio.ini, or cppcheck if not set.'),
-      severity: z
-        .enum(['high', 'medium', 'low'])
-        .optional()
-        .describe('Minimum severity to report. Defaults to low (all defects). Use high for critical-only reports.'),
-      verbose: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include tool output details if true. AVOID: causes excessive token usage. Only use when full output is needed for debugging.'),
+      description: 'Run static code analysis on a PlatformIO project. Supports cppcheck, clangtidy, and pvs-studio. Returns structured defect results (severity, message, file, line). Use to catch bugs and style issues before build.',
+      inputSchema: {
+        environment: z
+          .string()
+          .optional()
+          .describe('Environment to check. Checks all environments if omitted.'),
+        tool: z
+          .enum(['cppcheck', 'clangtidy', 'pvs-studio'])
+          .optional()
+          .describe('Analysis tool to use. Defaults to the check_tool configured in platformio.ini, or cppcheck if not set.'),
+        severity: z
+          .enum(['high', 'medium', 'low'])
+          .optional()
+          .describe('Minimum severity to report. Defaults to low (all defects). Use high for critical-only reports.'),
+        verbose: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Include tool output details if true. AVOID: causes excessive token usage. Only use when full output is needed for debugging.'),
+      },
     },
     async (params) => {
       try {
@@ -227,6 +229,5 @@ export function registerCheckTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }

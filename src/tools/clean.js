@@ -25,18 +25,20 @@ import { resolveWorkspace } from '../workspace.js';
  * @param {{ workspaceRoot: string }} ctx
  */
 export function registerCleanTools(server, ctx) {
-  server.tool(
+  server.registerTool(
     'pio_clean',
-    'Clean build artifacts for a specific PlatformIO environment. Per-environment only (safe for multi-env projects).',
     {
-      environment: z
-        .string()
-        .describe('Build environment to clean (e.g., "esp32dev"). Required.'),
-      verbose: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include full output if true.'),
+      description: 'Clean build artifacts for a specific PlatformIO environment. Per-environment only (safe for multi-env projects).',
+      inputSchema: {
+        environment: z
+          .string()
+          .describe('Build environment to clean (e.g., "esp32dev"). Required.'),
+        verbose: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Include full output if true.'),
+      },
     },
     async (params) => {
       try {
@@ -99,6 +101,5 @@ export function registerCleanTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }

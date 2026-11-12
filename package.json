@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
+    "prepublishOnly": "npm run build",
     "start": "node dist/server.js",
     "test": "vitest run --project unit --project integration",
     "test:unit": "vitest run --project unit",
@@ -36,10 +37,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pioarduino/pioarduino-vscode-ide"
+    "url": "https://github.com/ZanDev32/pioneer"
+  },
+  "bugs": {
+    "url": "https://github.com/ZanDev32/pioneer/issues"
+  },
+  "homepage": "https://github.com/ZanDev32/pioneer#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

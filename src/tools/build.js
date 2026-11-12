@@ -60,43 +60,45 @@ export function summarizeDiagnostics(diagnostics) {
  * @param {{ workspaceRoot: string }} ctx
  */
 export function registerBuildTools(server, ctx) {
-  server.tool(
+  server.registerTool(
     'pio_build',
-    'Build a PlatformIO project for a specified environment. Returns build status with structured warnings and errors (not raw logs). Use this to get token-efficient build diagnostics.',
     {
-      environment: z
-        .string()
-        .optional()
-        .describe(
-          'Build environment (e.g., "esp32dev"). Defaults to default_envs in platformio.ini.',
-        ),
-      verbose: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include full build output if true. AVOID: causes 16x token usage. Only use when diagnosing linker/compiler issues.'),
-      build_only: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Generate compilation database (compile_commands.json) for IDE integration without full build.'),
-      include_memory: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include RAM/Flash usage breakdown. AVOID: adds ~200 tokens per build. Only use when checking resource constraints.'),
-      incremental: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Only return diagnostics for files modified since the last build.'),
-      async: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe(
-          'Run build in the background. Returns a taskId immediately; poll with pio_task_status for results.',
-        ),
+      description: 'Build a PlatformIO project for a specified environment. Returns build status with structured warnings and errors (not raw logs). Use this to get token-efficient build diagnostics.',
+      inputSchema: {
+        environment: z
+          .string()
+          .optional()
+          .describe(
+            'Build environment (e.g., "esp32dev"). Defaults to default_envs in platformio.ini.',
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Include full build output if true. AVOID: causes 16x token usage. Only use when diagnosing linker/compiler issues.'),
+        build_only: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Generate compilation database (compile_commands.json) for IDE integration without full build.'),
+        include_memory: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Include RAM/Flash usage breakdown. AVOID: adds ~200 tokens per build. Only use when checking resource constraints.'),
+        incremental: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Only return diagnostics for files modified since the last build.'),
+        async: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            'Run build in the background. Returns a taskId immediately; poll with pio_task_status for results.',
+          ),
+      },
     },
     async (params) => {
       try {
@@ -292,6 +294,5 @@ export function registerBuildTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }

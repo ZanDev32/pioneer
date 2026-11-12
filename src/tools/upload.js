@@ -38,30 +38,32 @@ import { resolveWorkspace } from '../workspace.js';
  * @param {{ workspaceRoot: string }} ctx
  */
 export function registerUploadTools(server, ctx) {
-  server.tool(
+  server.registerTool(
     'pio_upload',
-    'Upload (flash) firmware to a connected ESP32, Arduino, or other embedded device. Builds the project first if needed, then flashes firmware via serial port. Use after pio_build when ready to deploy, or call directly to build + flash in one step. Supports auto-detecting the serial port, selecting a specific port, async background uploads, and structured diagnostics. ALWAYS confirm with the user before flashing — this overwrites the device firmware.',
     {
-      environment: z
-        .string()
-        .optional()
-        .describe('Build environment. Defaults to default_envs in platformio.ini.'),
-      port: z
-        .string()
-        .optional()
-        .describe('Serial port (e.g., /dev/ttyUSB0, COM3). Auto-detected if omitted.'),
-      verbose: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include full output if true. AVOID: causes excessive token usage. Only use for debugging upload failures.'),
-      async: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe(
-          'Run upload in the background. Returns a taskId immediately; poll with pio_task_status for results.',
-        ),
+      description: 'Upload (flash) firmware to a connected ESP32, Arduino, or other embedded device. Builds the project first if needed, then flashes firmware via serial port. Use after pio_build when ready to deploy, or call directly to build + flash in one step. Supports auto-detecting the serial port, selecting a specific port, async background uploads, and structured diagnostics. ALWAYS confirm with the user before flashing — this overwrites the device firmware.',
+      inputSchema: {
+        environment: z
+          .string()
+          .optional()
+          .describe('Build environment. Defaults to default_envs in platformio.ini.'),
+        port: z
+          .string()
+          .optional()
+          .describe('Serial port (e.g., /dev/ttyUSB0, COM3). Auto-detected if omitted.'),
+        verbose: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Include full output if true. AVOID: causes excessive token usage. Only use for debugging upload failures.'),
+        async: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            'Run upload in the background. Returns a taskId immediately; poll with pio_task_status for results.',
+          ),
+      },
     },
     async (params) => {
       try {
@@ -231,6 +233,5 @@ export function registerUploadTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }

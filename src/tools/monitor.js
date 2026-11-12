@@ -139,24 +139,26 @@ export function registerMonitorTools(server, ctx) {
   // -------------------------------------------------------------------------
   // pio_serial_start
   // -------------------------------------------------------------------------
-  server.tool(
+  server.registerTool(
     'pio_serial_start',
-    'Start a serial monitor daemon in the background. Spools pio device monitor output to a log file at <project>/.logs/<port>_<timestamp>.log. Use pio_serial_read to inspect and pio_serial_stop to halt.',
     {
-      environment: z
-        .string()
-        .optional()
-        .describe('PIO environment — used to inherit monitor settings from platformio.ini.'),
-      port: z
-        .string()
-        .optional()
-        .describe('Serial port (e.g., /dev/ttyUSB0, COM3). Auto-detected by pio if omitted.'),
-      baud: z
-        .number()
-        .int()
-        .optional()
-        .default(115200)
-        .describe('Baud rate. Default 115200 (standard for ESP32).'),
+      description: 'Start a serial monitor daemon in the background. Spools pio device monitor output to a log file at <project>/.logs/<port>_<timestamp>.log. Use pio_serial_read to inspect and pio_serial_stop to halt.',
+      inputSchema: {
+        environment: z
+          .string()
+          .optional()
+          .describe('PIO environment — used to inherit monitor settings from platformio.ini.'),
+        port: z
+          .string()
+          .optional()
+          .describe('Serial port (e.g., /dev/ttyUSB0, COM3). Auto-detected by pio if omitted.'),
+        baud: z
+          .number()
+          .int()
+          .optional()
+          .default(115200)
+          .describe('Baud rate. Default 115200 (standard for ESP32).'),
+      },
     },
     async (params) => {
       try {
@@ -315,24 +317,25 @@ export function registerMonitorTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 
   // -------------------------------------------------------------------------
   // pio_serial_stop
   // -------------------------------------------------------------------------
-  server.tool(
+  server.registerTool(
     'pio_serial_stop',
-    'Stop a running serial monitor daemon. Kills the pio device monitor process and returns a summary of captured output.',
     {
-      task_id: z
-        .string()
-        .describe('Task ID returned from pio_serial_start.'),
-      delete_log: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Delete the log file after stopping. Default false (keep for audit).'),
+      description: 'Stop a running serial monitor daemon. Kills the pio device monitor process and returns a summary of captured output.',
+      inputSchema: {
+        task_id: z
+          .string()
+          .describe('Task ID returned from pio_serial_start.'),
+        delete_log: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Delete the log file after stopping. Default false (keep for audit).'),
+      },
     },
     async ({ task_id, delete_log }) => {
       try {
@@ -416,35 +419,36 @@ export function registerMonitorTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 
   // -------------------------------------------------------------------------
   // pio_serial_read
   // -------------------------------------------------------------------------
-  server.tool(
+  server.registerTool(
     'pio_serial_read',
-    'Read the last N lines of a serial monitor log file. Optionally filter with a regex pattern. Use to inspect captured serial output without stopping the monitor.',
     {
-      task_id: z
-        .string()
-        .optional()
-        .describe('Active monitor task ID (resolves log file automatically).'),
-      log_file: z
-        .string()
-        .optional()
-        .describe('Direct log file path (alternative to task_id).'),
-      lines: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .default(100)
-        .describe('Number of lines to read from the end of the log. Default 100.'),
-      search_pattern: z
-        .string()
-        .optional()
-        .describe('Regex pattern to filter lines (JavaScript regex syntax). Applied before taking the tail.'),
+      description: 'Read the last N lines of a serial monitor log file. Optionally filter with a regex pattern. Use to inspect captured serial output without stopping the monitor.',
+      inputSchema: {
+        task_id: z
+          .string()
+          .optional()
+          .describe('Active monitor task ID (resolves log file automatically).'),
+        log_file: z
+          .string()
+          .optional()
+          .describe('Direct log file path (alternative to task_id).'),
+        lines: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .default(100)
+          .describe('Number of lines to read from the end of the log. Default 100.'),
+        search_pattern: z
+          .string()
+          .optional()
+          .describe('Regex pattern to filter lines (JavaScript regex syntax). Applied before taking the tail.'),
+      },
     },
     async (params) => {
       try {
@@ -547,6 +551,5 @@ export function registerMonitorTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }

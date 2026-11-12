@@ -187,13 +187,15 @@ export class TaskManager {
  * @param {{ workspaceRoot: string, taskManager: TaskManager }} ctx
  */
 export function registerTaskTools(server, ctx) {
-  server.tool(
+  server.registerTool(
     'pio_task_status',
-    'Check the status of a background task started with async: true. Returns task progress, exit code, and result when complete.',
     {
-      task_id: z
-        .string()
-        .describe('Task ID returned from an async operation (build, upload, monitor start, etc.)'),
+      description: 'Check the status of a background task started with async: true. Returns task progress, exit code, and result when complete.',
+      inputSchema: {
+        task_id: z
+          .string()
+          .describe('Task ID returned from an async operation (build, upload, monitor start, etc.)'),
+      },
     },
     async ({ task_id }) => {
       const state = ctx.taskManager.getTask(task_id);
@@ -211,13 +213,14 @@ export function registerTaskTools(server, ctx) {
       return {
         content: [{ type: 'text', text: JSON.stringify(state, null, 2) }],
       };
-    },
-  );
+    });
 
-  server.tool(
+  server.registerTool(
     'pio_task_list',
-    'List all currently running background tasks (builds, uploads, serial monitors).',
-    {},
+    {
+      description: 'List all currently running background tasks (builds, uploads, serial monitors).',
+      inputSchema: {},
+    },
     async () => {
       const active = ctx.taskManager.listActive();
       return {
@@ -228,6 +231,5 @@ export function registerTaskTools(server, ctx) {
           },
         ],
       };
-    },
-  );
+    });
 }

@@ -139,35 +139,37 @@ function summarizeTestResults(jsonResults, rawOutput) {
  * @param {{ workspaceRoot: string, taskManager: import('../tasks.js').TaskManager }} ctx
  */
 export function registerTestTools(server, ctx) {
-  server.tool(
+  server.registerTool(
     'pio_run_tests',
-    'Run PlatformIO unit tests for a project. Returns structured pass/fail results per test suite. Use to verify code correctness before build and upload. Supports both native (desktop) and target device testing.',
     {
-      environment: z
-        .string()
-        .optional()
-        .describe('Environment to test. Tests all environments if omitted.'),
-      filter: z
-        .string()
-        .optional()
-        .describe('Run only tests matching this name/pattern (passed to pio test --filter).'),
-      timeout_seconds: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .default(300)
-        .describe('Timeout in seconds. Default 300 (5 minutes). Increase for large test suites.'),
-      verbose: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include raw pio test output if true.'),
-      async: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Run tests in the background. Returns a taskId immediately; poll with pio_task_status for results.'),
+      description: 'Run PlatformIO unit tests for a project. Returns structured pass/fail results per test suite. Use to verify code correctness before build and upload. Supports both native (desktop) and target device testing.',
+      inputSchema: {
+        environment: z
+          .string()
+          .optional()
+          .describe('Environment to test. Tests all environments if omitted.'),
+        filter: z
+          .string()
+          .optional()
+          .describe('Run only tests matching this name/pattern (passed to pio test --filter).'),
+        timeout_seconds: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .default(300)
+          .describe('Timeout in seconds. Default 300 (5 minutes). Increase for large test suites.'),
+        verbose: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Include raw pio test output if true.'),
+        async: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Run tests in the background. Returns a taskId immediately; poll with pio_task_status for results.'),
+      },
     },
     async (params) => {
       try {
@@ -342,6 +344,5 @@ export function registerTestTools(server, ctx) {
           isError: true,
         };
       }
-    },
-  );
+    });
 }
