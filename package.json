@@ -1,6 +1,6 @@
 {
   "name": "@zandev32/pioneer",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "description": "Standalone MCP server for pioarduino/PlatformIO — build, upload, clean, and more for embedded firmware projects",
   "type": "module",
   "bin": {

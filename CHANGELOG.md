@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LICENSE` (Apache-2.0) ships in the package tarball, matching the `license` metadata.
 - `prepublishOnly` build hook, so `dist/` is always present in the published artifact.
+- Vitest suite: unit tests for the parsers, errors, metadata, and `TaskManager`, plus an
+  integration layer over real `pio` invocations.
+- Protocol lane (`npm run test:protocol`) that drives the built bundle through the MCP
+  Inspector CLI, so the shipped artifact — not just the source — is exercised.
+- CI matrix (`.github/workflows/ci.yml`): build and tests on Linux, macOS, and Windows
+  across Node 22 and 24, a protocol job, and an opt-in end-to-end job.
+- Host config fixtures for Claude Desktop, Cursor, and VS Code, and a host smoke-test
+  checklist for milestone releases.
 
 ### Changed
 
