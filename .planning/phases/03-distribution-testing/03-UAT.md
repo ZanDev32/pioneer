@@ -3,21 +3,21 @@ status: testing
 phase: 03-Distribution & Testing
 source: [03-VERIFICATION.md]
 started: 2026-11-12T07:48:00Z
-updated: 2026-11-13T01:35:00Z
+updated: 2026-11-13T01:40:00Z
 order: dependency-ordered (publish -> host validation -> release cut -> hardening), reordered by user request
 ---
 
 ## Current Test
 
-number: 1
-name: Publish the release candidate under `next`
+number: 2
+name: Three-host RC validation — Claude Desktop, Cursor, VS Code
 expected: |
-  Pushing tag `v0.2.0-rc.1` runs the CI `publish` job, which publishes
-  `@zandev32/pioneer@0.2.0-rc.1` with provenance and the `next` dist-tag only.
-  `npm view @zandev32/pioneer dist-tags --json` returns exactly
-  {"next":"0.2.0-rc.1"} — `latest` is untouched, and the package resolves from
-  the registry.
-awaiting: fix — `latest` dist-tag points at a prerelease
+  Following docs/host-smoke-test.md with `npx -y @zandev32/pioneer@next`
+  (= 0.2.0-rc.3): in each host the config is placed where that host reads it,
+  `${workspaceFolder}` / `PIO_WORKSPACE_ROOT` resolve, the server starts and
+  `tools/list` returns 12 tools, and a build completes. All three sign-off rows
+  read PASS.
+awaiting: user response
 
 ## Tests
 
