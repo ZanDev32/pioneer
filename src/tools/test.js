@@ -11,7 +11,6 @@ import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -202,38 +201,38 @@ export function registerTestTools(server, ctx) {
         if (params.async && ctx.taskManager) {
           const envLabel = params.environment || 'all';
 
-          const execPromise = new Promise((resolve) => {
-            execFile('pio', args, {
-              cwd: projectDir,
-              maxBuffer: 50 * 1024 * 1024,
-              env: { ...process.env },
-              timeout,
-            }, async (error, stdout, stderr) => {
-              const combined = (stdout || '') + '\n' + (stderr || '');
-              const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
+          const execPromise = (async () => {
+            let combined = '';
+            let exitCode = 0;
+            try {
+              combined = (await runPioCommand(args, { projectDir, timeout })).combined;
+            } catch (execErr) {
+              // Non-zero exit — a background run must record the failure, not throw it
+              exitCode = execErr.code;
+              combined = execErr.combined ?? '';
+            }
 
-              // Try to read structured JSON results
-              let jsonResults = null;
-              try {
-                if (fs.existsSync(jsonOutputPath)) {
-                  const content = fs.readFileSync(jsonOutputPath, 'utf8');
-                  jsonResults = JSON.parse(content);
-                  fs.unlinkSync(jsonOutputPath); // cleanup
-                }
-              } catch {}
+            // Try to read structured JSON results
+            let jsonResults = null;
+            try {
+              if (fs.existsSync(jsonOutputPath)) {
+                const content = fs.readFileSync(jsonOutputPath, 'utf8');
+                jsonResults = JSON.parse(content);
+                fs.unlinkSync(jsonOutputPath); // cleanup
+              }
+            } catch {}
 
-              const success = exitCode === 0;
-              resolve({
-                exitCode,
-                result: {
-                  success,
-                  exit_code: exitCode,
-                  results: jsonResults,
-                  summary: summarizeTestResults(jsonResults, combined),
-                },
-              });
-            });
-          });
+            const success = exitCode === 0;
+            return {
+              exitCode,
+              result: {
+                success,
+                exit_code: exitCode,
+                results: jsonResults,
+                summary: summarizeTestResults(jsonResults, combined),
+              },
+            };
+          })();
 
           const taskId = ctx.taskManager.createTask({
             type: 'test',

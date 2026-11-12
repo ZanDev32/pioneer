@@ -23,6 +23,14 @@ export default defineConfig({
       include: ['src/**/*.js'],
       exclude: ['src/server.js'],
       reporter: ['text', 'lcov'],
+      reportsDirectory: 'coverage',
+      thresholds: {
+        statements: 80,
+        branches: 70,
+        functions: 80,
+        lines: 80,
+        'src/parsers.js': { lines: 85 },
+      },
     },
   },
 });

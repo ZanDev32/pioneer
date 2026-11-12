@@ -6,7 +6,6 @@
  */
 
 import { z } from 'zod';
-import { execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -27,8 +26,8 @@ import { resolveWorkspace } from '../workspace.js';
 /**
  * Executes a pio command and captures stdout + stderr.
  *
- * Uses shared `runPioCommand` from ../utils.js for the sync path.
- * The async path below uses `exec` directly for fire-and-forget behavior.
+ * Uses shared `runPioCommand` from ../utils.js for both the sync and the
+ * async (background) paths, so one mock of the executor intercepts all of them.
  */
 
 /**
@@ -87,46 +86,48 @@ export function registerUploadTools(server, ctx) {
           const envLabel = params.environment || 'default';
           const portLabel = params.port || 'auto';
 
-          const execPromise = new Promise((resolve) => {
-            execFile('pio', args, {
-              cwd: projectDir,
-              maxBuffer: 50 * 1024 * 1024,
-              env: { ...process.env },
-            }, (error, stdout, stderr) => {
-              const combined = (stdout || '') + '\n' + (stderr || '');
-              const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
-              const success = !error;
+          const execPromise = (async () => {
+            let combined = '';
+            let exitCode = 0;
+            let failed = false;
+            try {
+              combined = (await runPioCommand(args, { projectDir })).combined;
+            } catch (execErr) {
+              // Non-zero exit — a background upload must record the failure, not throw it
+              failed = true;
+              exitCode = execErr.code;
+              combined = execErr.combined ?? '';
+            }
+            const success = !failed;
 
-              // Detect NO_DEVICE in output
-              if (/no serial ports? found|no device|serial port not found/i.test(combined)) {
-                resolve({
-                  exitCode,
-                  result: {
-                    success: false,
-                    exit_code: exitCode,
-                    error: { code: ERROR_CODES.NO_DEVICE, message: 'No serial device found' },
-                    port: params.port || null,
-                  },
-                });
-                return;
-              }
-
-              const diagnostics = parseAllDiagnostics(combined, projectDir);
-              const metadata = parseBuildMetadata(combined, projectDir, params.environment || '');
-
-              resolve({
+            // Detect NO_DEVICE in output
+            if (/no serial ports? found|no device|serial port not found/i.test(combined)) {
+              return {
                 exitCode,
                 result: {
-                  success: success && !hasErrors(diagnostics),
+                  success: false,
                   exit_code: exitCode,
+                  error: { code: ERROR_CODES.NO_DEVICE, message: 'No serial device found' },
                   port: params.port || null,
-                  diagnostics,
-                  summary: summarizeDiagnostics(diagnostics),
-                  metadata,
                 },
-              });
-            });
-          });
+              };
+            }
+
+            const diagnostics = parseAllDiagnostics(combined, projectDir);
+            const metadata = parseBuildMetadata(combined, projectDir, params.environment || '');
+
+            return {
+              exitCode,
+              result: {
+                success: success && !hasErrors(diagnostics),
+                exit_code: exitCode,
+                port: params.port || null,
+                diagnostics,
+                summary: summarizeDiagnostics(diagnostics),
+                metadata,
+              },
+            };
+          })();
 
           const taskId = ctx.taskManager.createTask({
             type: 'upload',

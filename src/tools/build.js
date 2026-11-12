@@ -9,7 +9,6 @@
 
 import { z } from 'zod';
 import path from 'path';
-import { execFile } from 'child_process';
 import {
   PioMcpError,
   ERROR_CODES,
@@ -126,38 +125,42 @@ export function registerBuildTools(server, ctx) {
         if (params.async && ctx.taskManager) {
           const envLabel = params.environment || 'default';
 
-          const execPromise = new Promise((resolve) => {
-            execFile('pio', args, {
-              cwd: projectDir,
-              maxBuffer: 50 * 1024 * 1024,
-              env: { ...process.env },
-            }, (error, stdout, stderr) => {
-              const combined = (stdout || '') + '\n' + (stderr || '');
-              const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
-              const diagnostics = parseAllDiagnostics(combined, projectDir);
-              const fullMetadata = parseBuildMetadata(combined, projectDir, params.environment || '');
-              const success = !error && !diagnostics.some((d) => d.type === 'error' || d.type === 'fatal error');
+          const execPromise = (async () => {
+            let combined = '';
+            let exitCode = 0;
+            let failed = false;
+            try {
+              combined = (await runPioCommand(args, { projectDir })).combined;
+            } catch (execErr) {
+              // Non-zero exit — a background build must record the failure, not throw it
+              failed = true;
+              exitCode = execErr.code;
+              combined = execErr.combined ?? '';
+            }
 
-              // Conditionally include memory — discouraged to reduce token usage
-              const metadata = params.include_memory
-                ? fullMetadata
-                : {
-                    duration_seconds: fullMetadata.duration_seconds,
-                    binary_size_bytes: fullMetadata.binary_size_bytes,
-                  };
+            const diagnostics = parseAllDiagnostics(combined, projectDir);
+            const fullMetadata = parseBuildMetadata(combined, projectDir, params.environment || '');
+            const success = !failed && !diagnostics.some((d) => d.type === 'error' || d.type === 'fatal error');
 
-              resolve({
-                exitCode,
-                result: {
-                  success,
-                  exit_code: exitCode,
-                  diagnostics,
-                  summary: summarizeDiagnostics(diagnostics),
-                  metadata,
-                },
-              });
-            });
-          });
+            // Conditionally include memory — discouraged to reduce token usage
+            const metadata = params.include_memory
+              ? fullMetadata
+              : {
+                  duration_seconds: fullMetadata.duration_seconds,
+                  binary_size_bytes: fullMetadata.binary_size_bytes,
+                };
+
+            return {
+              exitCode,
+              result: {
+                success,
+                exit_code: exitCode,
+                diagnostics,
+                summary: summarizeDiagnostics(diagnostics),
+                metadata,
+              },
+            };
+          })();
 
           const child = null; // exec callback-based, not spawn
           const taskId = ctx.taskManager.createTask({
@@ -250,6 +253,21 @@ export function registerBuildTools(server, ctx) {
               duration_seconds: fullMetadata.duration_seconds,
               binary_size_bytes: fullMetadata.binary_size_bytes,
             };
+
+        // Non-zero exit is a tool error, not a successful payload (FR-4)
+        if (!buildSuccess) {
+          throw new PioMcpError(
+            ERROR_CODES.BUILD_FAILED,
+            `Build failed (exit ${exitCode}): ${summary}`,
+            {
+              exit_code: exitCode,
+              diagnostics,
+              summary,
+              metadata,
+              incremental: !!params.incremental,
+            },
+          );
+        }
 
         // Build result object
         const result = {

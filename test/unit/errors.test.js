@@ -42,6 +42,7 @@ describe('ERROR_CODES taxonomy', () => {
       PROJECT_OUTSIDE_WORKSPACE: -32007,
       NO_DEVICE: -32008,
       PIO_COMMAND_NOT_FOUND: -32009,
+      PLATFORM_UNSUPPORTED: -32010,
     });
   });
 });

@@ -162,6 +162,14 @@ export function registerMonitorTools(server, ctx) {
     },
     async (params) => {
       try {
+        if (process.platform === 'win32') {
+          throw new PioMcpError(
+            ERROR_CODES.PLATFORM_UNSUPPORTED,
+            'The serial monitor is POSIX-only: it captures the port with stty + cat, which have no Windows equivalent. Run the MCP server under WSL, or use the Tier 3 monitor.sh wrapper on a POSIX host.',
+            { platform: process.platform, port: params.port ?? null },
+          );
+        }
+
         const projectDir = (await resolveWorkspace(ctx)).value;
 
         assertPioProject(projectDir);
@@ -214,8 +222,15 @@ export function registerMonitorTools(server, ctx) {
             stdio: ['ignore', 'pipe', 'pipe'],
           });
         } catch (spawnErr) {
-          if (spawnErr instanceof PioMcpError) throw spawnErr;
           logStream.end();
+          if (spawnErr instanceof PioMcpError) throw spawnErr;
+          if (/busy/i.test(spawnErr.message)) {
+            throw new PioMcpError(
+              ERROR_CODES.PORT_BUSY,
+              `Serial port ${serialPort} is busy — another process (serial monitor, uploader) holds it. Close it and retry.`,
+              { port: serialPort, baud: params.baud },
+            );
+          }
           throw new PioMcpError(
             ERROR_CODES.INTERNAL_ERROR,
             `Failed to start serial monitor: ${spawnErr.message}`,

@@ -48,6 +48,8 @@ export const ERROR_CODES = {
   NO_DEVICE: -32008,
   /** pio command not found in PATH */
   PIO_COMMAND_NOT_FOUND: -32009,
+  /** Tool feature requires a platform this host is not (e.g. POSIX-only serial monitor) */
+  PLATFORM_UNSUPPORTED: -32010,
 };
 
 /**
