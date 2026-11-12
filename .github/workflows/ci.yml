@@ -182,7 +182,9 @@ jobs:
           case "$latest" in
             *-*)
               echo "latest points at prerelease $latest - removing the tag"
-              npm dist-tag rm "$name" latest
+              if ! npm dist-tag rm "$name" latest; then
+                echo "::warning::could not remove the 'latest' dist-tag - the NPM_TOKEN can publish but not manage dist-tags. Fix by hand: npm dist-tag rm $name latest"
+              fi
               ;;
             *)
               echo "latest stays on ${latest:-<none>}"
