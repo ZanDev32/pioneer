@@ -123,3 +123,47 @@ jobs:
         run: PIO_E2E=1 npm run test:e2e
         env:
           PIO_E2E_PROJECT: ${{ vars.PIO_E2E_PROJECT }}
+
+  publish:
+    name: publish (npm provenance)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build bundle
+        run: npm run build
+
+      - name: Full suite
+        run: npm test
+
+      - name: Check tag matches package version
+        run: test "${GITHUB_REF_NAME#v}" = "$(npm pkg get version | tr -d '"')"
+
+      - name: Derive dist-tag
+        id: dist_tag
+        run: |
+          version="$(npm pkg get version | tr -d '"')"
+          case "$version" in
+            *-*) echo "flag=--tag next" >> "$GITHUB_OUTPUT" ;;
+            *) echo "flag=" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public ${{ steps.dist_tag.outputs.flag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
