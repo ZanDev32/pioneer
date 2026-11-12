@@ -159,11 +159,34 @@ jobs:
         run: |
           version="$(npm pkg get version | tr -d '"')"
           case "$version" in
-            *-*) echo "flag=--tag next" >> "$GITHUB_OUTPUT" ;;
-            *) echo "flag=" >> "$GITHUB_OUTPUT" ;;
+            *-*)
+              echo "flag=--tag next" >> "$GITHUB_OUTPUT"
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "flag=" >> "$GITHUB_OUTPUT"
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+              ;;
           esac
 
       - name: Publish to npm
         run: npm publish --provenance --access public ${{ steps.dist_tag.outputs.flag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Keep `latest` off prereleases
+        if: steps.dist_tag.outputs.prerelease == 'true'
+        run: |
+          name="$(npm pkg get name | tr -d '"')"
+          latest="$(npm view "$name" dist-tags.latest 2>/dev/null || true)"
+          case "$latest" in
+            *-*)
+              echo "latest points at prerelease $latest - removing the tag"
+              npm dist-tag rm "$name" latest
+              ;;
+            *)
+              echo "latest stays on ${latest:-<none>}"
+              ;;
+          esac
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
