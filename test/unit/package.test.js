@@ -20,7 +20,7 @@ async function packedFiles() {
   });
   const parsed = JSON.parse(stdout);
   const envelope = Array.isArray(parsed) ? parsed[0] : parsed[pkg.name] ?? Object.values(parsed)[0];
-  return envelope.files.map((file) => file.path);
+  return envelope.files.map((file) => file.path.replace(/\\/g, '/'));
 }
 
 describe('package identity', () => {

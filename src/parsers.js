@@ -18,7 +18,9 @@ import path from 'path';
 // Regex to make file paths relative to project root
 function relativize(filePath, projectDir) {
   if (projectDir && filePath.startsWith(projectDir)) {
-    return path.relative(projectDir, filePath);
+    // Compiler output and tool consumers are POSIX-minded: keep report paths
+    // identical on every OS instead of leaking Windows separators.
+    return path.relative(projectDir, filePath).split(path.sep).join('/');
   }
   return filePath;
 }
