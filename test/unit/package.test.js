@@ -39,6 +39,7 @@ describe('package identity', () => {
 });
 
 describe('packed tarball', () => {
+  // Shelling out to npm on Windows needs more than the 2 s unit budget.
   it('ships only dist/ plus package metadata', async () => {
     const files = await packedFiles();
 
@@ -50,7 +51,7 @@ describe('packed tarball', () => {
     if (bundleBuilt) {
       expect(files).toContain('dist/server.js');
     }
-  });
+  }, 15_000);
 });
 
 describe.skipIf(!bundleBuilt)('built bundle', () => {
