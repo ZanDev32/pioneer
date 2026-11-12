@@ -45,7 +45,7 @@ function parseArgs() {
       i++;
     } else if (args[i] === '--help' || args[i] === '-h') {
       console.log(`
-Pioneer v${process.env.npm_package_version || '0.1.0'}
+Pioneer v${__PIONEER_VERSION__}
 
 Usage:
   pioneer [options]
@@ -86,7 +86,7 @@ async function main() {
 
   const server = new McpServer({
     name: 'pioneer',
-    version: process.env.npm_package_version || '0.1.0',
+    version: __PIONEER_VERSION__,
     capabilities: { logging: {} },
   });
 
