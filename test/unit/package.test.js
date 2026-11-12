@@ -14,11 +14,12 @@ const PACKAGE_METADATA = ['package.json', 'README.md', 'LICENSE', 'CHANGELOG.md'
 const MAX_BUNDLE_BYTES = 5 * 1024 * 1024;
 
 async function packedFiles() {
-  // npm is a .cmd shim on Windows, and Node >=20 refuses to execFile a .cmd.
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const { stdout } = await execFileAsync(npm, ['pack', '--dry-run', '--json'], {
+  // npm is a .cmd shim on Windows and Node >=20 refuses to spawn one without a shell.
+  const win = process.platform === 'win32';
+  const { stdout } = await execFileAsync('npm', ['pack', '--dry-run', '--json'], {
     cwd: repoRoot,
     maxBuffer: 10 * 1024 * 1024,
+    shell: win,
   });
   const parsed = JSON.parse(stdout);
   const envelope = Array.isArray(parsed) ? parsed[0] : parsed[pkg.name] ?? Object.values(parsed)[0];
