@@ -3,7 +3,9 @@
  * Automated UAT for Pioneer MCP Server
  * Target: /home/zandev32/Documents/klaklik/SesaIoTNode
  * 
- * Tests all 12 MCP tools against a real PlatformIO project.
+ * Exercises the PlatformIO CLI paths behind the project-facing MCP tools
+ * against a real project. The serial monitor stop/read tools need a live
+ * device and are covered by the integration lane instead.
  */
 
 import { exec } from 'child_process';
@@ -13,8 +15,15 @@ import { TaskManager } from '../src/tasks.js';
 import path from 'path';
 
 const execAsync = promisify(exec);
-const ROOT = '/home/zandev32/Documents/klaklik/SesaIoTNode';
+const ROOT = process.env.PIO_E2E_PROJECT || '/home/zandev32/Documents/klaklik/SesaIoTNode';
 const ENV = 'KitchenGuard-V1';
+
+// Opt-in e2e gate (D-13): never run as part of the ordinary suite.
+if (process.env.PIO_E2E !== '1') {
+  console.log('PIO_E2E is not set to 1 — skipping the SesaIoTNode UAT (opt-in e2e gate).');
+  console.log(`Run with PIO_E2E=1 to target ${ROOT} (override with PIO_E2E_PROJECT).`);
+  process.exit(0);
+}
 
 // ---------------------------------------------------------------------------
 // Test Harness
@@ -254,7 +263,7 @@ const report = `# UAT Report — ${new Date().toISOString()}
 | Core Build | pio_build, pio_upload, pio_clean | ${results.filter(r => r.name.includes('build') || r.name.includes('upload') || r.name.includes('clean')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
 | Discovery | pio_list_devices, pio_list_boards | ${results.filter(r => r.name.includes('list_')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
 | Task Manager | pio_task_status, pio_task_list | ${results.filter(r => r.name.includes('task_')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
-| Monitor | pio_serial_start/stop/read | ${results.filter(r => r.name.includes('serial')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
+| Monitor | pio_serial_start (stop/read need a live device) | ${results.filter(r => r.name.includes('serial')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
 | Check/Test | pio_check, pio_run_tests | ${results.filter(r => r.name.includes('check') || r.name.includes('run_tests')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
 | Safety | hyphenated envs, diagnostics, structure | ${results.filter(r => r.name.includes('hyphenated') || r.name.includes('diagnostics') || r.name.includes('structure')).every(r => r.status === 'PASS') ? '✅' : '❌'} |
 

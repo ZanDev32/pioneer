@@ -17,6 +17,13 @@ export default defineConfig({
           testTimeout: 30000,
         },
       },
+      {
+        test: {
+          name: 'protocol',
+          include: ['test/protocol/**/*.test.js'],
+          testTimeout: 30000,
+        },
+      },
     ],
     coverage: {
       provider: 'v8',

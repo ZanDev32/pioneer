@@ -17,6 +17,8 @@
     "test": "vitest run --project unit --project integration",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
+    "test:protocol": "npm run build && vitest run --project protocol",
+    "test:e2e": "node test/uat-sesaiotnode.mjs",
     "test:coverage": "vitest run --project unit --project integration --coverage",
     "lint": "eslint src/"
   },
