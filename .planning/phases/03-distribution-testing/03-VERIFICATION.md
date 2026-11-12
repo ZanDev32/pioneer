@@ -1,8 +1,8 @@
 ---
 phase: 03-distribution-testing
-verified: 2026-11-12T07:36:34Z
+verified: 2026-11-12T07:42:45Z
 status: human_needed
-score: 29/32 must-haves verified
+score: 30/32 must-haves verified
 covered_files:
   - .agents/skills/pio-mcp-manager/SKILL.md
   - .github/workflows/ci.yml
@@ -62,9 +62,17 @@ covered_files:
   - test/unit/tasks.test.js
   - test/unit/utils.test.js
   - vitest.config.js
-covered_digest: "v4:sha256:6f0f3dbf7308bd9a24aa1fac96cc76055d2aa36d25ea03d8c1e426ab7a8e13b6"
+covered_digest: "v4:sha256:aeb6dadd482916094d756a0a0bb7a9fc5f682a5371163620b7a0688e23f5b42e"
 behavior_unverified: 1
 overrides_applied: 0
+re_verification:
+  previous_status: human_needed
+  previous_score: 29/32
+  gaps_closed:
+    - "#25 publish job: `if:` now requires `github.event_name == 'push'`"
+    - "Windows `npm pack` spawn (`shell: true` on win32) — hosted matrix green on 77fb258"
+  gaps_remaining: []
+  regressions: []
 behavior_unverified_items:
   - truth: "The tag-triggered publish path (guard → dist-tag derivation → `npm publish --provenance`) executes and publishes under `next`"
     test: "Push a `v*` tag whose name equals `npm pkg get version` and watch the `publish (npm provenance)` job"
@@ -80,22 +88,19 @@ human_verification:
   - test: "After sign-off, `npm version 0.2.0` and push the tag"
     expected: "`package.json` + `package-lock.json` both read `0.2.0`, the tag equals the version, the publish job admits it and moves `latest`"
     why_human: "State-changing release action, one-way for the published contract (D-26)"
-  - test: "Decide on the publish-job trigger hardening (see Gaps)"
-    expected: "Either accept the current `startsWith(github.ref, 'refs/tags/v')` gate or add `github.event_name == 'push'` before the first tag is pushed"
-    why_human: "Policy call: the effective invariant (tag exists + version matches + npm refuses republish) already holds; the literal must-have wording does not"
 ---
 
 # Phase 3: Distribution & Testing Verification Report
 
 **Phase Goal (ROADMAP):** Package for npm, test with multiple AI hosts — `@zandev32/pioneer` publish setup, Claude Desktop / Cursor / VS Code config, fresh Vitest suites, GitHub Actions CI/CD.
 
-**Verified:** 2026-11-12T07:36:34Z (HEAD `77fb258`, branch `master`, `origin/master` at the same commit)
+**Verified:** 2026-11-12T07:42:45Z (HEAD `5a8d8d7`, branch `master`, `origin/master` at the same commit)
 **Status:** `human_needed`
-**Re-verification:** No — initial verification (no prior `03-VERIFICATION.md`)
+**Re-verification:** Yes — refresh after `77fb258` (Windows shell spawn) and `5a8d8d7` (publish `if:` event guard); previous report scored 29/32
 
 ## Goal Achievement
 
-Distribution readiness is delivered and machine-verified end-to-end: the package builds to a single `dist/server.js`, the tarball is dist-only, the suite is green with enforced coverage floors, the protocol lane and the pinned Inspector commands pass against the built bundle, and the hosted CI on HEAD is green across 3 OS × Node 22/24. What is *not* achieved is the phase's own milestone gate: the RC has never been published (`next` does not exist) and no human has run the three-host checklist — both are `blocking-human` by D-06/D-20/D-26 and were excluded from this run.
+Distribution readiness is delivered and machine-verified end-to-end: the package builds to a single `dist/server.js`, the tarball is dist-only, the suite is green with enforced coverage floors, the protocol lane and the pinned Inspector commands pass against the built bundle, and the hosted CI on the matrix commit is green across 3 OS × Node 22/24. What is *not* achieved is the phase's own milestone gate: the RC has never been published (`next` does not exist) and no human has run the three-host checklist — both are `blocking-human` by D-06/D-20/D-26 and were excluded from this run.
 
 ## Must-Have Table
 
@@ -127,7 +132,7 @@ Roadmap Phase 3 has no separate success-criteria list; must-haves below are the 
 | 22 | CI runs a 3 OS × Node 22/24 matrix, full suite + coverage on Ubuntu, `test:unit` only on macOS/Windows — and it actually runs | ✓ VERIFIED | E16 (parse), E17 (green run: 6/6 matrix cells + protocol) |
 | 23 | CI triggers on `push` (`master`, tags `v*`), `pull_request` (`master`) and `workflow_dispatch` | ✓ VERIFIED | E16 |
 | 24 | Protocol job pins the Inspector version; an opt-in e2e job exists and only runs on `workflow_dispatch` | ✓ VERIFIED | E16 (`@modelcontextprotocol/inspector@2.14.0`, e2e `if`), E18 (pinned CLI invocations executed locally), E17 (green / skipped) |
-| 25 | Publish job runs only for a pushed `v*` tag and cannot be triggered by `pull_request` or `workflow_dispatch` | ⚠️ PARTIAL — human decision | Tag-only + PR-safe ✓ (E16 `if: startsWith(github.ref,'refs/tags/v')`, E17 skipped on push). Literal `workflow_dispatch` clause is **not** enforced: dispatching on a tag ref yields `github.ref = refs/tags/…`, so the job would start. Effective publish invariant still holds (tag/version guard + npm refuses republish) — see Gaps |
+| 25 | Publish job runs only for a pushed `v*` tag and cannot be triggered by `pull_request` or `workflow_dispatch` | ✓ VERIFIED | E16/E22 — `if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')`; `pull_request` and `workflow_dispatch` never satisfy `event_name == 'push'`. E17 skipped on a non-tag push |
 | 26 | A tag/version mismatch fails before `npm publish` | ✓ VERIFIED | E16 — `test "${GITHUB_REF_NAME#v}" = "$(npm pkg get version \| tr -d '"')"` is step 6 of 8, publish is step 8 |
 | 27 | Hyphen version → `--tag next`; plain version → `latest` | ✓ VERIFIED | E16 — `case "$version" in *-*) flag=--tag next …` |
 | 28 | `origin` remote matches `https://github.com/ZanDev32/pioneer` and equals `repository.url` | ✓ VERIFIED | E12 (`origin https://github.com/ZanDev32/pioneer.git`) |
@@ -136,11 +141,11 @@ Roadmap Phase 3 has no separate success-criteria list; must-haves below are the 
 | 31 | The RC is published under the `next` dist-tag | ✗ PENDING (human gate) | E20 — no tag locally or on GitHub, `npm view @zandev32/pioneer` → 404, no `next` dist-tag. Deferred by D-06/D-26 and by this run's no-push rule |
 | 32 | Host validation is recorded before the `v0.2.0` tag is pushed | ✗ PENDING (human gate) | `docs/host-smoke-test.md` sign-off rows blank by design; `03-08-SUMMARY.md:55-64` records the checkpoint |
 
-**Score:** 29/32 verified (1 partial awaiting a human policy call, 2 pending on the milestone human gate).
+**Score:** 30/32 verified (2 pending on the milestone human gate).
 
 ## Evidence
 
-Environment: Node `v26.13.0`, npm `12.2.2`, Python `3.14.9`, Linux x64. All commands below were executed in this checkout at HEAD `77fb258`.
+Environment: Node `v26.13.0`, npm `12.2.2`, Python `3.14.9`, Linux x64. E1–E15 and E17–E20 were captured at `77fb258`; E16 and E21–E22 were re-run at `5a8d8d7` (HEAD).
 
 ### E1 — `npm ci`
 ```
@@ -282,7 +287,7 @@ SKILL.md:57   npx -y @zandev32/pioneer   or   npm i -g @zandev32/pioneer
 CHANGELOG.md  ## [0.2.0] - unreleased | ### Breaking — Published as the scoped package @zandev32/pioneer
 ```
 
-### E16 — parsed `.github/workflows/ci.yml` (PyYAML)
+### E16 — parsed `.github/workflows/ci.yml` (PyYAML; re-parsed at `5a8d8d7`)
 ```
 triggers: {"push":{"branches":["master"],"tags":["v*"]},"pull_request":{"branches":["master"]},"workflow_dispatch":null}
 permissions(top): {'contents': 'read'}
@@ -295,13 +300,13 @@ JOB protocol: ubuntu-latest steps=6
    - Inspector tools/list → npx --yes @modelcontextprotocol/inspector@2.14.0 --cli node dist/server.js --method tools/list
    - Inspector tools/call → … --method tools/call --tool-name pio_task_list
 JOB e2e: if=github.event_name == 'workflow_dispatch' && vars.PIO_E2E_PROJECT != ''
-JOB publish: if=startsWith(github.ref, 'refs/tags/v') permissions={'contents':'read','id-token':'write'} steps=8
+JOB publish: if=github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') permissions={'contents':'read','id-token':'write'} steps=8
    steps: Checkout · Set up Node.js · Install dependencies · Build bundle · Full suite ·
           Check tag matches package version · Derive dist-tag · Publish to npm
 ```
 `grep -c "continue-on-error"` → 0; `grep -c "npm publish"` → 1.
 
-### E17 — the hosted matrix actually ran and is green on HEAD (GitHub Actions API)
+### E17 — the hosted matrix actually ran and is green on the matrix commit (GitHub Actions API)
 ```
 runs: 43175561402 77fb258 push completed success  2026-11-12T07:28:52Z master
       43175362904 d2cb481 push completed failure
@@ -317,7 +322,7 @@ success   test (ubuntu-latest, node 22)     success   test (ubuntu-latest, node 
 skipped   e2e (manual)
 skipped   publish (npm provenance)
 ```
-The pre-fix run failed **only** on `test (windows-latest, node 22)` and `test (windows-latest, node 24)` — the matrix genuinely exercises Windows and caught the two defects fixed by `a0f770d`/`d2cb481`/`77fb258`. `publish` skipped on a non-tag push confirms the tag gate at runtime.
+The pre-fix run failed **only** on `test (windows-latest, node 22)` and `test (windows-latest, node 24)` — the matrix genuinely exercises Windows and caught the two defects fixed by `a0f770d`/`d2cb481`/`77fb258`. `5a8d8d7` changes only the publish `if:` and this report, so the matrix result carries over unchanged; `publish` skipped on a non-tag push confirms the tag gate at runtime.
 
 ### E18 — the pinned Inspector commands work (executed locally, same argv as CI)
 ```
@@ -341,20 +346,45 @@ $ npm view @zandev32/pioneer version          → npm error 404
 $ npm view @zandev32/pioneer dist-tags        → npm error 404
 ```
 
-### E21 — working tree (no repository file changed by this verification)
+### E21 — working tree (only this report modified by re-verification)
 ```
 $ git status --porcelain
+ M .planning/phases/03-distribution-testing/03-VERIFICATION.md
 ?? .planning/.omp-checkpoint.json
 ?? .planning/.omp-next-action.json
 ?? .planning/.omp-task-results.json
 ?? .planning/.omp-ui-state.json
-?? .planning/phases/03-distribution-testing/03-VERIFICATION.md
 ?? .planning/state.json
-
-$ git diff --stat
-(empty)
 ```
-The five `.omp-*` / `state.json` files were already untracked before verification began; this report is the only file added. `dist/`, `coverage/`, `node_modules/` are gitignored, so `npm ci`/`npm run build`/`npm run test:coverage` left no tracked change.
+The `.omp-*` / `state.json` files were already untracked; this report is the only tracked file changed. `dist/`, `coverage/`, `node_modules/` are gitignored, so `npm ci`/`npm run build`/`npm run test:unit` left no tracked change.
+
+### E22 — re-verification at HEAD `5a8d8d7` (2026-11-12)
+
+Unit suite, including the Windows-spawn pack path:
+```
+$ npm ci && npm run build && npm run test:unit
+added 231 packages in 1s
+Built dist/server.js successfully
+ Test Files  8 passed (8)
+      Tests  71 passed (71)
+
+$ npx vitest run --project unit test/unit/package.test.js --reporter=verbose
+ ✓ |unit| test/unit/package.test.js > packed tarball > ships only dist/ plus package metadata 325ms
+ ✓ |unit| test/unit/package.test.js > built bundle > is a single file under the 5 MB ceiling 0ms
+ ✓ |unit| test/unit/package.test.js > built bundle > reports the package.json version in the help banner 86ms
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+```
+`test/unit/package.test.js:17-22` spawns `npm pack` with `shell: process.platform === 'win32'`; the pre-fix hosted run `43175362904` failed only the two Windows cells, and `43175561402` (`77fb258`) is green 6/6 matrix cells + protocol.
+
+Parsed workflow assertions at `5a8d8d7` (`.github/workflows/ci.yml`):
+```
+publish.if        = github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')   (line 129)
+matrix            = os: [ubuntu-latest, macos-latest, windows-latest] × node: [22, 24]    (lines 20-22)
+npm publish       = 1 occurrence (line 167: --provenance --access public ${{ steps.dist_tag.outputs.flag }})
+continue-on-error = 0 occurrences
+permissions       = top-level contents: read (lines 11-12); publish job contents: read + id-token: write (lines 131-133)
+```
 
 ## Key Links / Data-Flow
 
@@ -393,7 +423,7 @@ No orphaned requirements: every ID claimed by a plan maps to verified code, and 
 
 | File | Finding | Severity | Impact |
 |---|---|---|---|
-| `.github/workflows/ci.yml:129` | Publish gate checks only `github.ref`, never `github.event_name`. A `workflow_dispatch` run *on a tag ref* satisfies `startsWith(github.ref,'refs/tags/v')`, so the job starts; the tag/version guard then admits it, and npm refuses the republish. `pull_request` and branch pushes are correctly excluded | ⚠️ Warning | Contradicts the literal must-have #25; cannot publish a *new* version. One-line hardening: `if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')` |
+| `.github/workflows/ci.yml:129` | ~~Publish gate checked only `github.ref`~~ **Resolved in `5a8d8d7`**: `if:` is now `github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')`, so `pull_request` and a `workflow_dispatch` on a tag ref cannot start the job | ✓ Resolved | Must-have #25 now holds literally; no publish hardening left |
 | `test/unit/package.test.js:56` | `describe.skipIf(!bundleBuilt)` silently skips the ceiling/banner assertions when `dist/` is absent, and `npm test` has no build step (D-25). CI builds first, so the assertions ran here (E3) | ℹ️ Info | A local `npm ci && npm test` reports green without exercising the bundle |
 | `.planning/phases/03-distribution-testing/03-VALIDATION.md` | Still `status: draft`, and its "Test Infrastructure" table asserts "Vitest 3.2.7 … D-14's matrix includes Node 18" — stale after the D-14 amendment (Vitest 5.1.0, Node 22/24) | ℹ️ Info | Documentation drift that would mislead a later reader; `validate-phase` was never run for this phase |
 | `03-06-PLAN.md` key-links | Says the lockfile "pins Vitest 3.2.7 for the Node 18 lane" — same staleness, plan text only | ℹ️ Info | No code impact |
@@ -411,11 +441,10 @@ Probe execution: **not applicable** — no `scripts/*/tests/probe-*.sh` in the r
 
 ## Gaps
 
-No blocker. Automated must-haves are achieved; the two pending truths and one partial are listed below.
+No blocker. Automated must-haves are achieved; the two pending truths are listed below. #25 was closed by `5a8d8d7` (verified in E22).
 
 | Truth | Status | Why | Needed |
 |---|---|---|---|
-| #25 publish job "cannot be triggered by `workflow_dispatch`" | partial | The `if` inspects `github.ref` only; a dispatch on a tag ref starts the job. The tag/version guard plus npm's no-republish rule keep a *new* release impossible | Add `github.event_name == 'push' &&` to `.github/workflows/ci.yml:129`, or accept and amend the must-have |
 | #31 RC published under `next` | pending | No tag pushed, no publish (E20); forbidden by this run's dispatch and gated behind host validation (D-06/D-26) | Human: push `v0.2.0-rc.1` after sign-off |
 | #32 host validation recorded before `v0.2.0` | pending | Three-host GUI validation cannot run in a headless sandbox | Human: complete `docs/host-smoke-test.md` sign-off |
 
@@ -429,11 +458,9 @@ Deferred items: none — no later milestone phase claims the publish or host-val
 
 3. **Cut `0.2.0` only after sign-off.** `npm version 0.2.0` then push `v0.2.0`. Expected: `package.json` and `package-lock.json` both `0.2.0`, tag equals version, publish job moves `latest`.
 
-4. **Decide the publish-trigger hardening** (Gaps, first row) before the first tag is pushed.
-
-**Release state as verified (E20): there is NO `v0.2.0` tag — no tag at all, locally or on GitHub — `@zandev32/pioneer` returns 404 from the registry, no `next` dist-tag exists, and `latest` has not moved. Nothing was tagged, pushed, or published during this verification, and `git status --porcelain` shows no repository file modified apart from the pre-existing untracked GSD runtime JSON files.**
+**Release state as verified (E20): there is NO `v0.2.0` tag — no tag at all, locally or on GitHub — `@zandev32/pioneer` returns 404 from the registry, no `next` dist-tag exists, and `latest` has not moved. Nothing was tagged, pushed, or published during this verification, and `git status --porcelain` shows only this report modified, plus the pre-existing untracked GSD runtime JSON files.**
 
 ---
 
-_Verified: 2026-11-12T07:36:34Z_
-_Verifier: GSD verifier (Phase3Verifier, omp)_
+_Verified: 2026-11-12T07:42:45Z_
+_Verifier: GSD verifier (Phase3VerifierRefresh, omp)_
