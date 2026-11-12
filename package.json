@@ -1,10 +1,10 @@
 {
   "name": "@zandev32/pioneer",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0-rc.2",
   "description": "Standalone MCP server for pioarduino/PlatformIO — build, upload, clean, and more for embedded firmware projects",
   "type": "module",
   "bin": {
-    "pioneer": "./dist/server.js"
+    "pioneer": "dist/server.js"
   },
   "main": "./dist/server.js",
   "files": [
@@ -39,7 +39,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ZanDev32/pioneer"
+    "url": "git+https://github.com/ZanDev32/pioneer.git"
   },
   "bugs": {
     "url": "https://github.com/ZanDev32/pioneer/issues"

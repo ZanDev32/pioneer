@@ -29,7 +29,7 @@ async function packedFiles() {
 describe('package identity', () => {
   it('declares the scoped name, bin target, and dist-only allowlist', () => {
     expect(pkg.name).toBe('@zandev32/pioneer');
-    expect(pkg.bin.pioneer).toBe('./dist/server.js');
+    expect(pkg.bin.pioneer).toBe('dist/server.js');
     expect(pkg.files).toEqual(['dist/']);
   });
 
