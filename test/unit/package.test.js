@@ -14,7 +14,9 @@ const PACKAGE_METADATA = ['package.json', 'README.md', 'LICENSE', 'CHANGELOG.md'
 const MAX_BUNDLE_BYTES = 5 * 1024 * 1024;
 
 async function packedFiles() {
-  const { stdout } = await execFileAsync('npm', ['pack', '--dry-run', '--json'], {
+  // npm is a .cmd shim on Windows, and Node >=20 refuses to execFile a .cmd.
+  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const { stdout } = await execFileAsync(npm, ['pack', '--dry-run', '--json'], {
     cwd: repoRoot,
     maxBuffer: 10 * 1024 * 1024,
   });
